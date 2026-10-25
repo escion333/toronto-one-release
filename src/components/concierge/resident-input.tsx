@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +19,15 @@ export function ResidentInput({
   onSubmit: (text: string) => void;
 }) {
   const [value, setValue] = useState("");
-  const [consent, setConsent] = useState(false);
+  const locationId = useId();
+  const [locationType, setLocationType] = useState<"intersection" | "address">(
+    "intersection",
+  );
   const [sent, setSent] = useState(false);
   if (sent)
     return (
       <p className="card-footnote" role="status">
-        {address ? "Address supplied for this lookup." : "Your choice was sent."}
+        {address ? "Location supplied for this lookup." : "Your choice was sent."}
       </p>
     );
   return (
@@ -37,45 +40,66 @@ export function ResidentInput({
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (consent && value.trim() && !disabled) {
+            if (value.trim() && !disabled) {
               onSubmit(
-                `Please use ${value.trim()} in Toronto MyVote to find my assigned voting place. I approve this address lookup.`,
+                locationType === "intersection"
+                  ? `Please use the Toronto intersection ${value.trim()} to choose a nearby public example address and look up its voting information in MyVote.`
+                  : `Please look up voting information for the street address ${value.trim()} in Toronto MyVote.`,
               );
               setSent(true);
             }
           }}
         >
-          <label className="sr-only" htmlFor="voting-street-address">
-            Toronto street address
+          <div
+            className="voting-location-modes"
+            role="group"
+            aria-label="Location type"
+          >
+            {(["intersection", "address"] as const).map((mode) => (
+              <Button
+                key={mode}
+                type="button"
+                variant={locationType === mode ? "secondary" : "ghost"}
+                aria-pressed={locationType === mode}
+                disabled={disabled}
+                onClick={() => {
+                  setLocationType(mode);
+                  setValue("");
+                }}
+              >
+                {mode === "intersection" ? "Intersection" : "Street address"}
+              </Button>
+            ))}
+          </div>
+          <label className="sr-only" htmlFor={locationId}>
+            {locationType === "intersection"
+              ? "Toronto intersection"
+              : "Toronto street address"}
           </label>
           <Input
-            id="voting-street-address"
+            id={locationId}
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            placeholder="123 Example Street"
-            autoComplete="street-address"
+            placeholder={
+              locationType === "intersection"
+                ? "Queen St & Bay St"
+                : "123 Example Street"
+            }
+            autoComplete={locationType === "intersection" ? "off" : "street-address"}
             maxLength={180}
             required
             disabled={disabled}
           />
-          <p className="card-footnote">
-            Street address only—no unit or voter ID. Your address goes to the AI
-            provider and Toronto MyVote for this lookup.
-          </p>
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(event) => setConsent(event.target.checked)}
-            />
-            <span>Use this address to find my voting place.</span>
-          </label>
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={disabled || !consent || !value.trim()}
-          >
-            Find my voting place
+          {locationType === "intersection" && (
+            <p className="card-footnote">
+              We’ll check a nearby public example address. Your assigned voting place
+              may differ.
+            </p>
+          )}
+          <Button type="submit" className="w-full" disabled={disabled || !value.trim()}>
+            {locationType === "intersection"
+              ? "Find example voting information"
+              : "Find voting place"}
           </Button>
         </form>
       ) : (

@@ -14,4 +14,3 @@ docs/character
 *.tsbuildinfo
 
 **/.wrangler
-Dockerfile.padding

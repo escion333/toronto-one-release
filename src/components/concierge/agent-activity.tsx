@@ -6,7 +6,6 @@ import {
   ChevronDown,
   CircleAlert,
   CircleDashed,
-  Globe2,
   LoaderCircle,
 } from "lucide-react";
 import type { CityUIMessage } from "@/lib/ai/agent";
@@ -17,8 +16,10 @@ const labels: Record<string, string> = {
   browserAct: "Navigate service",
   requestResidentInput: "Ask for a detail",
   publishResult: "Check excerpts",
+  citeSource: "Check source excerpts",
   recreationBookingStatus: "Read booking status",
   recreationSearch: "Find recreation sessions",
+  lookupVotingPlace: "Find voting information",
   prepareRecreationBooking: "Prepare reservation",
 };
 export function AgentActivity({
@@ -33,10 +34,22 @@ export function AgentActivity({
     .filter(
       (part) =>
         part.type !== "tool-requestResidentInput" &&
-        part.type !== "tool-requestStreetAddress" &&
-        part.type !== "tool-publishResult",
+        part.type !== "tool-requestStreetAddress",
     );
   if (!parts.length) return null;
+  const browserTools = new Set([
+    "browserOpen",
+    "browserObserve",
+    "browserAct",
+    "recreationSearch",
+    "lookupVotingPlace",
+    "publishResult",
+    "citeSource",
+  ]);
+  const visibleParts = parts.filter(
+    (part) => !browserTools.has(getToolName(part)) || part.state !== "output-available",
+  );
+  if (!active && !visibleParts.length) return null;
   const pending =
     active &&
     parts.some(
@@ -46,11 +59,7 @@ export function AgentActivity({
   const incomplete = parts.some(
     (part) => part.state !== "output-available" && part.state !== "output-error",
   );
-  const sourceOnly = parts.every((part) =>
-    ["browserOpen", "browserObserve", "browserAct", "recreationSearch"].includes(
-      getToolName(part),
-    ),
-  );
+  const sourceOnly = parts.every((part) => browserTools.has(getToolName(part)));
   return (
     <details className="agent-activity" data-running={active}>
       <summary>
@@ -60,8 +69,6 @@ export function AgentActivity({
           <CircleAlert size={15} aria-hidden="true" />
         ) : incomplete ? (
           <CircleDashed size={15} aria-hidden="true" />
-        ) : sourceOnly ? (
-          <Globe2 size={15} aria-hidden="true" />
         ) : (
           <Check size={15} aria-hidden="true" />
         )}
@@ -76,15 +83,12 @@ export function AgentActivity({
               ? "A step needs attention"
               : incomplete
                 ? "Check incomplete"
-                : sourceOnly
-                  ? "City sources checked"
-                  : "Activity"}
+                : "Activity"}
         </span>
-        <span className="activity-count">{parts.length}</span>
         <ChevronDown className="activity-chevron" size={14} aria-hidden="true" />
       </summary>
       <ol>
-        {parts.map((part) => (
+        {visibleParts.map((part) => (
           <li key={part.toolCallId} data-failed={part.state === "output-error"}>
             {part.state === "output-available" ? (
               <Check size={14} aria-hidden="true" />

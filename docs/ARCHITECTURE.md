@@ -2,6 +2,12 @@
 
 Toronto One is a Next.js App Router application with one AI model and two City of Toronto service workflows. The model reasons and selects tools; application code controls validation, permissions and confirmation.
 
+## Landing and concierge routes
+
+`src/app/page.tsx` composes the server-rendered landing from `src/components/landing`; `src/app/chat/page.tsx` composes the existing concierge. The production base path remains `/toronto-one`, so the public entry is `https://www.tomsanee.com/toronto-one` and **Start chat** navigates internally to `/toronto-one/chat`. Without a local base path, the corresponding routes are `/` and `/chat`.
+
+The landing has scoped light-only styles and responsive static WebP assets in `public/landing`, including a transparent render of the original native-groom mascot. It loads no Three.js renderer and performs no service lookup or transaction. The concierge keeps its existing theme preferences, seven-state `AgentMascot` boundary and server-side service policies.
+
 ## Request flow
 
 1. The client sends the latest resident message to a same-origin route.
@@ -12,6 +18,14 @@ Toronto One is a Next.js App Router application with one AI model and two City o
 6. The client streams real message and tool events into the conversation, progress display and mascot state.
 
 There is one shared public browser implementation with isolated session contexts and serialized operations. Model tools do not accept arbitrary JavaScript or unrestricted navigation. Exact host/path rules and action allowlists are enforced outside the model. Retrieved page content is evidence, not trusted instructions. Matching a quoted excerpt establishes provenance, not complete semantic correctness.
+
+The voting lookup tool accepts either a street address or an intersection. Intersection resolution uses fixed City GIS intersection and public-facility endpoints with validated, escaped street-name queries, bounded distances and response validation. It grants no additional model-controlled browser destinations. The browser binds the chosen lookup context to address-matching MyVote observations; published voting cards inherit that context and the parsed official venue. Google Maps is a presentation-only iframe built from the venue address, separate from City browser execution and credentials.
+
+### Chat sources
+
+Each assistant reply has one collapsed source disclosure. `publishResult` attaches supporting citations automatically; `citeSource` attaches exact excerpts for ordinary factual replies without creating a result card. The server resolves observation IDs to the actual page URL, title and check time, checks freshness and verifies excerpt support. Linked recreation listing excerpts retain their own observation metadata rather than inheriting the detail page's timestamp.
+
+The disclosure counts unique approved page URLs, ignoring fragments, query ordering and trailing slashes while preserving distinct search filters and activity IDs. Repeated citations share one source entry; excerpts from different observations keep their original check times in metadata. The UI shows one excerpt preview per source with its matching observation time. Without selected supporting excerpts, successful browser observations appear as **Pages checked** rather than **Sources**. Failed and unfinished steps do not add sources. Chat result cards share the reply's disclosure; Tasks retain their own disclosure. Citation metadata stays in the existing temporary server conversation and results, with no browser-storage persistence.
 
 ## Private recreation execution
 

@@ -20,12 +20,26 @@ Toronto One uses Next.js, shadcn/Radix and Lucide. A centered raccoon companion,
 
 Local font licences are retained beside the font files. Light, dark and system appearance are supported. Reduced-motion and reduced-transparency preferences are respected.
 
+## Brand wordmark
+
+The approved mark is the outlined, stacked **TORONTO / ONE** wordmark from Figma’s **FINAL DIRECTION** frame. `public/brand/toronto-one-wordmark.svg` is the production master; its paths preserve the final letterforms, aligned lower line and refined spacing. `BrandLogo` supplies its accessible name and shares the artwork between the mobile header (90px wide, about 32px high) and desktop sidebar (156px wide). Preserve its aspect ratio and the surrounding layout space. Dark appearance inverts the black artwork to white without a client-side image swap.
+
+The browser icon uses the same complete wordmark in `toronto-one-favicon.svg`, with a browser-colour-scheme treatment. The 180px Apple touch icon places it on the light canvas in `toronto-one-apple-touch.png`. The previous Wide lens symbol is retired. The animated raccoon remains the activity companion.
+
+## Landing page
+
+The application root presents the landing page; **Start chat** enters `/chat`. Production retains the `/toronto-one` prefix for both routes. The landing uses scoped, light-only styles with the existing local Instrument Sans and Inter fonts, Toronto blue and the light paper canvas. It does not change the concierge's light, dark or system appearance preference.
+
+The hero pairs closely grouped copy with the supplied wide Toronto skyline postcard and a sharp static render of the original mascot, retaining its native Blender fur, materials and lighting. Transparent responsive WebP assets preserve the rendered appearance without live 3D or an undersized animated loop. The concierge's seven activity animations remain unchanged. The service field contains 60 static emoji labels; Voting and Recreation appear first with same-size soft blue ✅ highlights, and the introduction distinguishes the implemented demo from future possibilities. Service labels have no click or hover behavior. Navigation links retain visible focus and at least 44px targets.
+
 ## Components
 
 - **ConversationComposer:** growing input capsule, editable draft during agent work and distinct send/stop actions. Mobile Return inserts a newline. Stop applies to conversation generation, not an already submitted City transaction.
 - **MessageBubble:** aligned resident/agent messages, readable text, escaped content and keyboard-reachable copy actions. Reading older messages does not force a jump to the latest response.
-- **CityResultCard:** compact voting or recreation facts, one contextual action and a source disclosure with exact excerpts and check times.
-- **AgentActivity:** real tool progress with labels appropriate to the operation.
+- **CityResultCard:** compact voting or recreation facts and one contextual action. Chat cards share the reply's source disclosure; Tasks retain their own disclosure.
+- **Voting location input:** defaults to an intersection, with an optional street-address mode. The lookup button submits directly, with no separate checkbox. Voting cards use a plain Nearby address disclosure, one visible assignment limitation, a prominent venue name and labelled rows for date, hours and entrances. Facility records and distances sit inside the disclosure. The Google Maps widget is 240px tall on mobile and 280px on desktop, with an external map link.
+- **SourceDisclosure:** one quiet, collapsed native disclosure beneath a reply: **Sources · N**, or **Pages checked · N** when no supporting excerpts were selected. Each expanded source shows only a link, compact Toronto-local check time and one supporting excerpt preview, limited to three visible lines. Full observed title/URL and full date/timezone remain available through the link and timestamp titles; the timestamp also has an accessible check-time label. The preview and timestamp come from the same observation. Counts represent unique pages, and complete citation evidence stays in session/result metadata. Summary and link targets are at least 44px, with visible keyboard focus and reduced-motion support.
+- **AgentActivity:** real pending tool progress, errors and booking activity. Completed public-browser steps are represented by the source disclosure rather than a redundant click history or step count.
 - **BottomSheet:** shadcn/Radix focus management, accessible title, scrollable content, reachable action footer and downward handle dismissal. Closing a booking review resets its local approval control.
 - **AgentMascot:** seven explicit activity states: `idle`, `listening`, `thinking`, `working`, `success`, `needs_input` and `error`. Transparent Blender-rendered WebP frames use bounded canvas playback, visibility suspension, reduced-motion stills and image-failure fallback. This is rendered animation, not a live WebGL scene.
 

@@ -1,6 +1,6 @@
 # Service capabilities
 
-The enabled scope is City of Toronto municipal voting information and recreation. Other municipal services, other governments and other ACTIVE tenants are outside the implemented workflows. A link from a City page does not grant execution authority over an external service.
+The enabled service scope is City of Toronto municipal voting information and recreation. The chat can also answer questions about Toronto One's creator using a concise, locally maintained bio adapted from [Tom Sanee's portfolio](https://www.tomsanee.com/), without a City lookup. Other municipal services, other governments and other ACTIVE tenants are outside the implemented workflows. A link from a City page does not grant execution authority over an external service.
 
 ## Voting information
 
@@ -9,6 +9,12 @@ Official destination: [Toronto MyVote](https://myvote.toronto.ca/home).
 The public browser can use address suggestions and read the assigned voting-place information. Result cards include observed official excerpts, source links and check times. The application does not establish voter eligibility, check a resident's voter-list identity, register a voter or provide mail-in ballot status.
 
 Address input is used for the requested lookup. Results depend on the official site's current publication state; missing or unavailable information must be reported explicitly.
+
+Residents can instead supply an intersection. A bounded server lookup matches the two street names against the City's Centreline Intersection Point layer, then selects the closest verified library, civic centre or community recreation centre address returned within 1.5 km. Distances are straight-line estimates. Ambiguous intersections, unavailable City data and missing matching MyVote suggestions require correction or the optional street-address flow; the model cannot invent a substitute address.
+
+Intersection cards display the address used with a Nearby address label and a short assignment limitation. Expanding the address reveals the public facility, intersection, straight-line distance, City source records and a MyVote confirmation link. The assignment belongs to that public address; it does not establish the resident's assignment, even when nearby. Application code binds the lookup type and address to the observed MyVote result before publication.
+
+Voting cards include an embedded Google Maps venue map and an external map link when the official result supplies a venue address. The map uses a keyless Google Maps iframe and sends only the public polling venue name and address to Google, excluding the lookup address and intersection. Map availability depends on Google and browser settings; the official address, entrance information and external link remain visible. Google Maps does not supply the election assignment or certify entrance accessibility.
 
 ## Recreation discovery
 

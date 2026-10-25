@@ -10,13 +10,42 @@ export const resultInputSchema = z.object({
   observationId: z.string().uuid(),
   facts: z.array(factSchema).min(1).max(10),
 });
+export const votingLookupSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("address"), address: z.string() }),
+  z.object({
+    type: z.literal("intersection"),
+    address: z.string(),
+    intersection: z.string(),
+    publicPlace: z.string(),
+    distanceMetres: z.number().nonnegative().max(1500),
+    intersectionSourceUrl: z.string().url(),
+    publicPlaceSourceUrl: z.string().url(),
+  }),
+]);
+export type VotingLookup = z.infer<typeof votingLookupSchema>;
+export const votingDetailsSchema = z.object({
+  lookup: votingLookupSchema,
+  venue: z.object({ name: z.string(), address: z.string() }).optional(),
+});
+export const citationInputSchema = z.object({
+  observationId: z.string().uuid(),
+  excerpts: z.array(factSchema).min(1).max(10),
+});
+export const sourceCitationSchema = citationInputSchema.extend({
+  url: z.string().url(),
+  title: z.string(),
+  checkedAt: z.string().datetime(),
+});
+export type SourceCitation = z.infer<typeof sourceCitationSchema>;
 export const cityResultSchema = z.object({
   id: z.string().uuid(),
   kind: z.enum(["voting", "recreation", "guidance"]),
   title: z.string(),
   sourceUrl: z.string().url(),
   checkedAt: z.string(),
+  voting: votingDetailsSchema.optional(),
   facts: z.array(factSchema.extend({ sourceUrl: z.string().url().optional() })),
+  sources: z.array(sourceCitationSchema).optional(),
   status: z.enum(["information_found", "requires_official_booking"]),
   handoff: z.object({ url: z.string().url(), checkedAt: z.string() }).optional(),
   plan: z

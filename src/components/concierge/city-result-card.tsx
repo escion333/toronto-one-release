@@ -1,28 +1,31 @@
 "use client";
-import { useState } from "react";
-import { ChevronRight, ExternalLink } from "lucide-react";
 import type { CityResult } from "@/lib/ai/contracts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { groupSources, resultSources } from "@/lib/ai/sources";
+import { SourceDisclosure } from "./source-disclosure";
+import { VotingLocationMap } from "./voting-location-map";
+import { ChevronDown } from "lucide-react";
 
 export function CityResultCard({
   result,
   onPrepare,
+  showSources = true,
 }: {
   result: CityResult;
   onPrepare?: (id: string) => void;
+  showSources?: boolean;
 }) {
-  const [sourceOpen, setSourceOpen] = useState(false);
   const voting = result.kind === "voting";
-  const checkedAt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Toronto",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(result.checkedAt));
+  const lookup = voting ? result.voting?.lookup : undefined;
+  const venue = voting ? result.voting?.venue : undefined;
+  const addressKey = (value: string) =>
+    value
+      .toLowerCase()
+      .replace(/,?\s*toronto\s*$/i, "")
+      .trim();
   // Keep cost, eligibility and availability visible alongside the first facts.
-  // The source sheet retains every exact excerpt, without shortening its values.
+  // Full evidence remains in citation metadata; the source disclosure is a preview.
   const summaryFacts = result.facts.filter(
     (fact, index) =>
       index < 3 ||
@@ -31,18 +34,73 @@ export function CityResultCard({
       ) ||
       /\$|\bfees?\b|\bcharges?\b/i.test(fact.quote),
   );
+  const displayedFacts = voting
+    ? summaryFacts.filter(
+        (fact) =>
+          fact.quote.trim() !== venue?.name &&
+          addressKey(fact.quote) !== addressKey(venue?.address ?? "") &&
+          addressKey(fact.quote) !== addressKey(lookup?.address ?? ""),
+      )
+    : summaryFacts;
   return (
     <Card className="request-card city-result-card">
       <CardContent>
-        <h2 className="card-heading">{result.title}</h2>
-        <dl className="result-facts">
-          {summaryFacts.map((fact, index) => (
+        <h2 className="card-heading">{voting ? "Voting information" : result.title}</h2>
+        {lookup?.type === "intersection" && (
+          <div className="voting-example-context">
+            <details className="voting-example-details">
+              <summary>
+                <span className="voting-lookup-label">Nearby address</span>
+                <span>{lookup.address}</span>
+                <ChevronDown size={14} aria-hidden="true" />
+              </summary>
+              <div className="voting-example-evidence">
+                <p>{lookup.publicPlace}</p>
+                <p>
+                  Near {lookup.intersection} · about {lookup.distanceMetres} m in a
+                  straight line.
+                </p>
+                <a href={lookup.intersectionSourceUrl} target="_blank" rel="noreferrer">
+                  City intersection record
+                </a>
+                <a href={lookup.publicPlaceSourceUrl} target="_blank" rel="noreferrer">
+                  City public-place record
+                </a>
+                <a
+                  href="https://myvote.toronto.ca/home"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Check your address in MyVote
+                </a>
+              </div>
+            </details>
+            <p className="voting-example-caveat">
+              Your assigned voting place may differ.
+            </p>
+          </div>
+        )}
+        {venue && (
+          <div className="voting-venue">
+            <h3>{venue.name}</h3>
+            <p>{venue.address}</p>
+          </div>
+        )}
+        <dl className={`result-facts${voting ? " voting-facts" : ""}`}>
+          {displayedFacts.map((fact, index) => (
             <div key={index}>
-              <dt className="sr-only">{fact.label}</dt>
-              <dd className="source-quote">{fact.quote}</dd>
+              <dt className={voting ? undefined : "sr-only"}>{fact.label}</dt>
+              <dd className="source-quote">
+                {voting
+                  ? fact.quote.replace(/^(?:Preferred|Accessible) Entrance:\s*/i, "")
+                  : fact.quote}
+              </dd>
             </div>
           ))}
         </dl>
+        {voting && result.voting?.venue && (
+          <VotingLocationMap venue={result.voting.venue} />
+        )}
         {result.kind === "recreation" && onPrepare && (
           <div className="result-next">
             <Button className="w-full" onClick={() => onPrepare(result.id)}>
@@ -56,54 +114,8 @@ export function CityResultCard({
             </p>
           </div>
         )}
-        <Button
-          variant="ghost"
-          className="result-source-trigger"
-          onClick={() => setSourceOpen(true)}
-        >
-          Sources · Checked {checkedAt}
-          <ChevronRight size={15} aria-hidden="true" />
-        </Button>
-        {sourceOpen && (
-          <section className="inline-sources" aria-label="Official sources">
-            <a
-              className="official-link"
-              href={result.sourceUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              {voting ? "Toronto MyVote" : "City activity page"}
-              <ExternalLink size={15} aria-hidden="true" />
-            </a>
-            <dl className="result-facts source-facts">
-              {result.facts.map((fact, index) => (
-                <div key={index}>
-                  <dt>{fact.label}</dt>
-                  <dd className="source-quote">{fact.quote}</dd>
-                  {fact.sourceUrl && fact.sourceUrl !== result.sourceUrl && (
-                    <dd>
-                      <a
-                        className="official-link"
-                        href={fact.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        City activity listing
-                        <ExternalLink size={14} aria-hidden="true" />
-                      </a>
-                    </dd>
-                  )}
-                </div>
-              ))}
-            </dl>
-            <p className="sheet-note">
-              Exact official-page excerpts.{" "}
-              {voting
-                ? "Eligibility and voter registration were not checked."
-                : "Availability can change; this result does not hold a spot."}
-            </p>
-            <p className="sheet-note">Toronto One is independent from the City.</p>
-          </section>
+        {showSources && (
+          <SourceDisclosure sources={groupSources(resultSources(result))} />
         )}
       </CardContent>
     </Card>

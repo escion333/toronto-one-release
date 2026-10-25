@@ -1,6 +1,8 @@
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { randomUUID } from "node:crypto";
 import { ExecutionTimings } from "./timing.ts";
+import type { VotingLookup } from "./contracts.ts";
+import { normalizeStreet, votingVenue } from "./voting.ts";
 import {
   allowedActions,
   addressSuggestionAllowed,
@@ -17,6 +19,7 @@ export type Observation = {
   checkedAt: string;
   text: string;
   controls: (BrowserControl & { actions: BrowserAction[] })[];
+  voting?: { lookup: VotingLookup; venue?: { name: string; address: string } };
 };
 const resourceHosts = new Set([
   "myvote.toronto.ca",
@@ -50,6 +53,7 @@ export class CityBrowser {
   private page: Page | undefined;
   private current: Observation | undefined;
   private requestedAddress: string | undefined;
+  private votingLookup: VotingLookup | undefined;
   private queue: Promise<unknown> = Promise.resolve();
   readonly observations = new Map<string, Observation>();
   async run<T>(operation: () => Promise<T>): Promise<T> {
@@ -97,9 +101,75 @@ export class CityBrowser {
     return this.page;
   }
   async open(url: string): Promise<Observation> {
+    this.votingLookup = undefined;
     const page = await this.getPage();
     await this.navigate(page, url);
     await this.settle(page);
+    return this.observe();
+  }
+  async lookupVotingPlace(lookup: VotingLookup): Promise<Observation> {
+    let observed = await this.open("https://myvote.toronto.ca/home");
+    const one = (matches: (control: BrowserControl) => boolean) => {
+      const controls = observed.controls.filter(matches);
+      const control = controls[0];
+      if (controls.length !== 1 || !control)
+        throw new Error("The MyVote lookup form changed. Please try again shortly.");
+      return control;
+    };
+    const act = async (
+      control: BrowserControl,
+      action: BrowserAction,
+      value?: string,
+    ) => {
+      observed = await this.act(observed.id, control.ref, action, value);
+    };
+    const until = async (ready: (current: Observation) => boolean) => {
+      for (let attempt = 0; attempt < 10 && !ready(observed); attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        observed = await this.observe();
+      }
+      if (!ready(observed))
+        throw new Error(
+          "MyVote did not return the requested address or voting place. Try again shortly or check directly in MyVote.",
+        );
+    };
+    await act(
+      one((control) => control.field === "Address"),
+      "fill",
+      lookup.address,
+    );
+    await until((current) =>
+      current.controls.some((control) => control.role === "option"),
+    );
+    const selected = one(
+      (control) =>
+        control.role === "option" &&
+        normalizeStreet(control.name) === normalizeStreet(lookup.address),
+    );
+    await act(selected, "click");
+    await act(
+      one((control) => control.name === "Go"),
+      "click",
+    );
+    await until((current) =>
+      current.controls.some(
+        (control) => control.href === "https://myvote.toronto.ca/votingplace",
+      ),
+    );
+    await act(
+      one((control) => control.href === "https://myvote.toronto.ca/votingplace"),
+      "click",
+    );
+    await until((current) => Boolean(votingVenue(current.text)));
+    if (
+      !observed.text
+        .split(/\r?\n/)
+        .some((line) => normalizeStreet(line) === normalizeStreet(lookup.address))
+    )
+      throw new Error(
+        "MyVote returned a different lookup address. No voting result was published.",
+      );
+    this.votingLookup = structuredClone(lookup);
     return this.observe();
   }
   private async settle(page: Page) {
@@ -246,6 +316,21 @@ export class CityBrowser {
         .filter((c) => c.actions.length > 0),
     };
     this.current = observation;
+    if (
+      new URL(observation.url).hostname === "myvote.toronto.ca" &&
+      new URL(observation.url).pathname === "/votingplace" &&
+      this.votingLookup &&
+      observation.text
+        .split(/\r?\n/)
+        .some(
+          (line) =>
+            normalizeStreet(line) === normalizeStreet(this.votingLookup?.address ?? ""),
+        )
+    ) {
+      observation.voting = { lookup: structuredClone(this.votingLookup) };
+      const venue = votingVenue(observation.text);
+      if (venue) observation.voting.venue = venue;
+    }
     this.observations.set(observation.id, observation);
     if (this.observations.size > 40) {
       const first = this.observations.keys().next().value;
@@ -288,7 +373,10 @@ export class CityBrowser {
         throw new Error(
           "Enter a short address or search phrase, never a password or identity document.",
         );
-      if (control.field === "Address") this.requestedAddress = value;
+      if (control.field === "Address") {
+        this.requestedAddress = value;
+        this.votingLookup = undefined;
+      }
       await this.timing.measure("form_entry", () => element.fill(value));
     } else if (action === "select") {
       if (!value) throw new Error("Select a value.");
@@ -309,6 +397,7 @@ export class CityBrowser {
     this.page = undefined;
     this.current = undefined;
     this.requestedAddress = undefined;
+    this.votingLookup = undefined;
     this.observations.clear();
   }
 }

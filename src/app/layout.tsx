@@ -37,8 +37,16 @@ export const metadata: Metadata = {
     "Your Toronto companion. Find real voting information and recreation, with help preparing City bookings.",
   robots: { index: false, follow: false },
   icons: {
-    icon: { url: appPath("/brand/toronto-one-wide-lens.svg"), type: "image/svg+xml" },
-    apple: appPath("/brand/toronto-one-apple.png"),
+    icon: {
+      url: appPath("/brand/toronto-one-favicon.svg"),
+      type: "image/svg+xml",
+      sizes: "any",
+    },
+    apple: {
+      url: appPath("/brand/toronto-one-apple-touch.png"),
+      sizes: "180x180",
+      type: "image/png",
+    },
   },
 };
 

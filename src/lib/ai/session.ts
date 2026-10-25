@@ -71,6 +71,13 @@ export function getSession(
     }
   const existing = id ? sessions.get(id) : undefined;
   if (existing) {
+    // Earlier streams omitted assistant IDs; repair retained messages once so
+    // refreshes cannot give React duplicate keys or merge separate replies.
+    const messageIds = new Set<string>();
+    for (const message of existing.messages) {
+      if (!message.id || messageIds.has(message.id)) message.id = randomUUID();
+      messageIds.add(message.id);
+    }
     // Keep the legitimate City sign-in alive while Next hot-reloads local adapter code.
     // Browser cookies remain in the same private context; no storageState is exported.
     if (process.env.NODE_ENV === "development" && existing.booking) {

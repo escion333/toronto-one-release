@@ -36,6 +36,7 @@ import { RecreationBookingPanel } from "./recreation-booking-panel";
 import { ConversationComposer } from "./conversation-composer";
 import { MessageBubble } from "./message-bubble";
 import { AgentActivity } from "./agent-activity";
+import { MessageSources } from "./source-disclosure";
 import { useAppViewport } from "./use-app-viewport";
 
 type Surface = "concierge" | "tasks" | "you";
@@ -173,7 +174,6 @@ export function TorontoOneView({
       <aside className="desktop-sidebar" aria-label="Toronto One sidebar">
         <div className="sidebar-brand">
           <BrandLogo />
-          <span>Toronto One</span>
         </div>
         <nav className="sidebar-navigation" aria-label="Sidebar navigation">
           {navigation.map(({ id, label, icon: Icon }) => (
@@ -209,7 +209,6 @@ export function TorontoOneView({
           </div>
           <div className="companion-header">
             <AgentMascot state={agent.mascot} size="companion" />
-            <span>Toronto One</span>
           </div>
           <Button
             className="header-action"
@@ -344,6 +343,7 @@ export function TorontoOneView({
                                 return (
                                   <CityResultCard
                                     key={part.toolCallId}
+                                    showSources={false}
                                     result={
                                       agent.results.find(
                                         (result) => result.id === part.output.id,
@@ -418,6 +418,9 @@ export function TorontoOneView({
                               }
                               return null;
                             })}
+                            {message.role === "assistant" && (
+                              <MessageSources message={message} />
+                            )}
                           </div>
                         ))}
                       </div>

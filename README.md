@@ -6,9 +6,11 @@ An AI concierge for City of Toronto voting information and recreation reservatio
 
 The application uses Next.js, React, shadcn/ui, AI SDK 7, Vercel AI Gateway and Playwright. The default model is configurable GPT-6.1 Sol. It has no simulated chatbot or booking fallback.
 
+The integrated light-only landing page uses [www.tomsanee.com/toronto-one](https://www.tomsanee.com/toronto-one) as its production entry, with **Start chat** opening [/toronto-one/chat](https://www.tomsanee.com/toronto-one/chat). Locally without a base path, these routes are `/` and `/chat`. The landing preserves the original native-groom mascot as a static, responsive WebP render; the concierge retains its activity animation and light, dark and system appearance settings. See [validation](docs/VALIDATION.md) for deployment status.
+
 ## Capabilities
 
-- **Voting:** address-specific municipal voting-place information from MyVote. It does not determine eligibility or check voter registration.
+- **Voting:** municipal voting-place information from MyVote using a street address, or a nearby public example address selected from City data for an intersection. Example results clearly distinguish the public address from the resident's assignment. Voting cards include a Google Maps venue widget. It does not determine eligibility or check voter registration.
 - **Recreation:** live activity discovery and a reviewed, authenticated zero-dollar reservation flow. Residents sign in directly with the City, choose a participant, accept waivers themselves and approve the exact checkout before submission.
 - **Tasks:** sourced findings and verified booking receipts within a temporary local session.
 - **Companion:** seven animation states driven by actual agent activity, using transparent frames rendered from a Blender character, with reduced-motion and static fallbacks.
@@ -38,7 +40,7 @@ The selected model requires valid Vercel AI Gateway credentials and account acce
 corepack pnpm@10.34.8 dev --hostname 127.0.0.1 --port 3000
 ```
 
-Open [Toronto One](http://127.0.0.1:3000). Ask where to vote or request a recreation activity. For booking, use the separate City browser window for authentication and legal declarations. Review the participant, session and amount before approving a real reservation. A zero-dollar online reservation can still have a disclosed check-in fee.
+Open [Toronto One](http://127.0.0.1:3000) and choose **Start chat**, or open the [concierge directly](http://127.0.0.1:3000/chat). Ask where to vote or request a recreation activity. For booking, use the separate City browser window for authentication and legal declarations. Review the participant, session and amount before approving a real reservation. A zero-dollar online reservation can still have a disclosed check-in fee.
 
 ## Privacy and execution
 

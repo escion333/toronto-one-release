@@ -1,0 +1,462 @@
+.landing {
+  color-scheme: light;
+  --landing-paper: #fcfbf9;
+  --landing-ink: #202124;
+  --landing-blue: #0057e7;
+  --landing-blue-hover: #0044b8;
+  --landing-latent: #8b8f89;
+  --landing-muted: #696b6d;
+  --landing-line: #dedfda;
+  --landing-font-display: var(--font-instrument), Arial, sans-serif;
+  --landing-font-body: var(--font-inter), Arial, sans-serif;
+  height: 100dvh;
+  width: 100%;
+  overflow-x: clip;
+  overflow-y: auto;
+  scroll-padding-top: 40px;
+  background: var(--landing-paper);
+  color: var(--landing-ink);
+  font-family: var(--landing-font-body);
+  font-size: 16px;
+  line-height: normal;
+  -webkit-font-smoothing: antialiased;
+}
+.landing *,
+.landing *::before,
+.landing *::after {
+  box-sizing: border-box;
+}
+.landing :where(a) {
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.landing a:focus-visible {
+  outline: 3px solid var(--landing-blue);
+  outline-offset: 6px;
+}
+.landing ::selection {
+  background: var(--landing-blue);
+  color: #fff;
+}
+.cityPostcard picture,
+.mascotStage picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.header {
+  height: 86px;
+  margin-inline: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-family: var(--landing-font-display);
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  white-space: nowrap;
+}
+.wordmark img {
+  flex-shrink: 0;
+  width: 156px;
+  height: auto;
+}
+.hero {
+  position: relative;
+  isolation: isolate;
+  max-width: 1920px;
+  height: clamp(740px, calc(100svh - 86px), 920px);
+  margin: auto;
+  overflow: clip;
+}
+.heroCopy {
+  position: relative;
+  z-index: 3;
+  width: 66%;
+  padding: clamp(64px, 6.2vw, 112px) 0 0 40px;
+}
+.hero h1 {
+  margin: 0;
+  font-family: var(--landing-font-display);
+  font-size: clamp(64px, 6.8vw, 118px);
+  font-weight: 600;
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+.heroGreeting,
+.heroPromise,
+.heroLastLine {
+  display: block;
+}
+.heroGreeting {
+  white-space: nowrap;
+}
+.heroPromise {
+  color: var(--landing-blue);
+}
+.heroLastLine {
+  white-space: nowrap;
+}
+.heroSubtitle {
+  font-family: var(--landing-font-display);
+  font-size: clamp(18px, 1.6vw, 25px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.4;
+  margin: 22px 0 0;
+}
+.heroCta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  margin-top: 24px;
+  padding: 14px 26px;
+  border-radius: 999px;
+  background: var(--landing-blue);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+  transition: background-color 0.2s;
+}
+.heroCta:hover {
+  background: var(--landing-blue-hover);
+}
+.cityPostcard {
+  position: absolute;
+  z-index: 1;
+  top: 70px;
+  right: 18px;
+  width: min(86vw, 1600px);
+  aspect-ratio: 16 / 10;
+  border: 10px solid #fff;
+  border-radius: 34px;
+  overflow: hidden;
+  background: var(--landing-paper);
+  transform: rotate(-3deg);
+  box-shadow: 0 18px 50px #20212412;
+  pointer-events: none;
+}
+.cityPostcard img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 1;
+}
+.cityPostcard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #fcfbf9d9 0%,
+    #fcfbf9d1 36%,
+    #fcfbf9c7 50%,
+    #fcfbf900 80%
+  );
+  mask-image: linear-gradient(#000 0%, #000 42%, transparent 60%);
+}
+.mascotStage {
+  position: absolute;
+  z-index: 2;
+  right: -3%;
+  top: 20px;
+  width: min(64vw, 1100px);
+  aspect-ratio: 1;
+}
+
+.mascot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  mask-image: linear-gradient(#000 0%, #000 76%, transparent 92%);
+}
+
+.services {
+  padding: 115px 40px 72px;
+  max-width: 1920px;
+  margin: auto;
+}
+.services h2 {
+  font-family: var(--landing-font-display);
+  font-size: clamp(60px, 7.3vw, 122px);
+  line-height: 0.95;
+  letter-spacing: -0.065em;
+  font-weight: 550;
+  margin: 0 0 24px;
+}
+.services h2 span {
+  color: var(--landing-muted);
+}
+.serviceField {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px 20px;
+  font-family: var(--landing-font-display);
+  font-size: clamp(25px, 2.65vw, 48px);
+  font-weight: 600;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+}
+.serviceItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22em;
+  max-width: 100%;
+  white-space: nowrap;
+}
+.serviceField > .serviceItem:not(.serviceActive) {
+  color: var(--landing-latent);
+  padding-block: 2px;
+}
+.serviceEmoji {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.1em;
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.12em;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: normal;
+}
+.serviceLabel {
+  display: inline-block;
+}
+.serviceActive {
+  flex: 0 0 auto;
+  font: inherit;
+  letter-spacing: inherit;
+  min-height: 44px;
+  padding: 0.1em 0.45em;
+  background: #e7f0ff;
+  border-radius: 999px;
+  color: var(--landing-blue);
+}
+.fieldNote {
+  max-width: 760px;
+  margin: 0 0 40px;
+  font-size: clamp(16px, 1.4vw, 20px);
+  color: var(--landing-muted);
+  line-height: 1.6;
+}
+.footer {
+  margin: 0 40px;
+  padding: 26px 0 32px;
+  border-top: 1px solid var(--landing-line);
+}
+.footerCredit {
+  margin: 0;
+  font-size: 14px;
+  color: var(--landing-muted);
+  line-height: 1.8;
+}
+.footerCredit a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  vertical-align: middle;
+  gap: 5px;
+  color: var(--landing-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.footerCredit a:hover {
+  color: var(--landing-blue);
+}
+.footerAuthor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  white-space: nowrap;
+}
+.footerLeaf {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 0.85em;
+  line-height: 1;
+}
+.skipLink {
+  position: fixed;
+  z-index: 10;
+  left: 12px;
+  top: 12px;
+  padding: 15px 22px;
+  background: var(--landing-blue);
+  color: white;
+  transform: translateY(-160%);
+}
+.skipLink:focus {
+  transform: none;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+@media (min-width: 1600px) {
+  .mascotStage {
+    top: -30px;
+  }
+  .cityPostcard {
+    top: 15px;
+    right: 40px;
+    width: min(84vw, 1440px);
+    aspect-ratio: 16 / 9;
+  }
+  .cityPostcard::after {
+    mask-image: linear-gradient(#000 0%, #000 58%, transparent 78%);
+  }
+}
+@media (max-width: 1100px) and (min-width: 601px) {
+  .hero {
+    height: 820px;
+  }
+  .heroCopy {
+    width: 76%;
+    padding-top: 45px;
+  }
+  .hero h1 {
+    font-size: clamp(52px, 6.8vw, 75px);
+  }
+  .cityPostcard {
+    width: 90vw;
+    right: 2%;
+    top: 240px;
+  }
+  .mascotStage {
+    width: 78vw;
+    right: -9%;
+    top: 210px;
+  }
+  .services {
+    padding-top: 85px;
+  }
+  .serviceField {
+    font-size: clamp(22px, 2.7vw, 30px);
+    font-weight: 700;
+    column-gap: 18px;
+  }
+}
+@media (max-width: 600px) {
+  .header {
+    height: 76px;
+    margin-inline: 20px;
+  }
+  .wordmark {
+    font-size: 22px;
+    gap: 8px;
+  }
+  .wordmark img {
+    width: 124px;
+    height: auto;
+  }
+  .hero {
+    height: clamp(720px, calc(180vw + 80px), 900px);
+  }
+  .heroCopy {
+    width: 100%;
+    padding: 24px 20px 0;
+  }
+  .hero h1 {
+    font-size: clamp(40px, 11.7vw, 70px);
+    letter-spacing: -0.06em;
+  }
+  .heroSubtitle {
+    font-size: clamp(16px, 4.5vw, 22px);
+    margin-top: 18px;
+  }
+  .cityPostcard {
+    top: clamp(200px, 50vw, 300px);
+    width: 116vw;
+    right: -8%;
+    border-width: 7px;
+    border-radius: 25px;
+    transform: rotate(-3deg);
+  }
+  .cityPostcard img {
+    opacity: 0.85;
+  }
+  .cityPostcard::after {
+    display: none;
+  }
+  .mascotStage {
+    width: 126vw;
+    right: -19%;
+    top: clamp(240px, 62vw, 340px);
+  }
+
+  .services {
+    padding: 68px 20px 40px;
+  }
+  .services h2 {
+    font-size: clamp(32px, 10.2vw, 70px);
+    margin-bottom: 18px;
+    line-height: 0.98;
+  }
+  .serviceField {
+    font-size: clamp(19px, 5.1vw, 30px);
+    line-height: 1.06;
+    font-weight: 700;
+    column-gap: 12px;
+    row-gap: 6px;
+  }
+  .fieldNote {
+    font-size: 16px;
+    margin-bottom: 28px;
+  }
+  .footer {
+    margin-inline: 20px;
+    padding: 20px 0 26px;
+  }
+  .footerCredit {
+    font-size: 12px;
+  }
+}
+@media (max-width: 380px) {
+  .wordmark {
+    font-size: 20px;
+  }
+  .wordmark img {
+    width: 112px;
+    height: auto;
+  }
+  .serviceField {
+    font-size: 19px;
+    column-gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing {
+    scroll-behavior: auto;
+  }
+  .heroCta {
+    transition: none;
+  }
+}
+@media (prefers-contrast: more) {
+  .landing {
+    --landing-latent: #606660;
+    --landing-muted: #515651;
+  }
+}

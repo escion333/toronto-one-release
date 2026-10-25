@@ -1,4 +1,5 @@
 import { reserveRun } from "@/lib/ai/limits";
+import { randomUUID } from "node:crypto";
 import { appBasePath } from "@/lib/app-path";
 import { createAgentUIStreamResponse } from "ai";
 import { z } from "zod";
@@ -92,6 +93,7 @@ export async function POST(request: Request) {
     return await createAgentUIStreamResponse({
       agent: createCityAgent(session),
       uiMessages: messages,
+      generateMessageId: randomUUID,
       abortSignal: request.signal,
       timeout: { totalMs: 180_000 },
       sendReasoning: false,
@@ -112,12 +114,14 @@ export async function POST(request: Request) {
           "recreationBookingStatus",
           "prepareRecreationBooking",
           "recreationSearch",
+          "lookupVotingPlace",
           "browserOpen",
           "browserObserve",
           "browserAct",
           "requestResidentInput",
           "requestStreetAddress",
           "publishResult",
+          "citeSource",
         ]);
         const start = completed.findLastIndex(
           (message) => message.id === userMessage.id,
