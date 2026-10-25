@@ -18,7 +18,7 @@ corepack pnpm@10.34.8 exec wrangler deploy --config deploy/cloudflare/wrangler.j
 
 Supply `CF_UI_REGISTRY_USER` and `CF_UI_REGISTRY_PASSWORD` as repository Actions secrets using short-lived Cloudflare registry credentials. Remove these secrets after a one-off release. Application secrets stay in the existing Cloudflare runtime and are never provided to the image build.
 
-After the remote build succeeds, use its immutable registry digest as `containers[0].images.base` in a private deployment config next to the canonical Wrangler config. Deploying that registry reference uploads only the Worker and image selection; it does not invoke local Docker. Verify the public health endpoint’s configured and running image digests and the changed interface after rollout.
+After the remote build succeeds, use its immutable registry digest as `containers[0].images.base.image` in a private deployment config next to the canonical Wrangler config. Deploying that registry reference uploads only the Worker and image selection; it does not invoke local Docker. Verify the public health endpoint’s configured and running image digests and the changed interface after rollout.
 
 ## Preview limits
 
