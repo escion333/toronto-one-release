@@ -31,6 +31,8 @@ The disclosure counts unique approved page URLs, ignoring fragments, query order
 
 The authenticated booking adapter is separate from the model-visible public browser. The resident authenticates directly in a temporary City browser. Account pages, passwords, MFA input and receipt contents do not enter model context.
 
+The private browser opens at a desktop viewport (1280px wide) and scales into the conversation, with a resident-controlled full-screen option. A Paste into City field button reads the local clipboard only on a resident click and forwards characters over the existing private browser connection. A visible masked input also supports native paste and typing, clearing its DOM value immediately. Input content is not retained in React state, browser storage, chat, telemetry or the remote clipboard. If clipboard permission is unavailable, residents can use the masked input instead.
+
 The adapter prepares the reviewed activity and participant/cart flow. The resident selects the participant and personally accepts the City waiver. Before submission, application code requires a fresh approval bound to the exact activity, participant, zero-dollar amount and accepted terms. It rechecks the cart and persists an atomic outbound intent before pressing Finish once.
 
 Confirmation requires an official numbered receipt and matching enrollment evidence in the City account. Printable receipt capture is a separate operation: an export failure must not resubmit an already confirmed reservation. An uncertain submission outcome blocks retry and requires reconciliation. Unsupported forms, security challenges and nonzero totals stop for resident attention.

@@ -69,7 +69,7 @@ export async function createResidentDesktop(owner: string) {
     throw new Error("Both private City browsers are in use. Please try again shortly.");
   const xvfb = spawn(
     "Xvfb",
-    ["-displayfd", "3", "-screen", "0", "430x900x24", "-nolisten", "tcp"],
+    ["-displayfd", "3", "-screen", "0", "1280x900x24", "-nolisten", "tcp"],
     { stdio: ["ignore", "ignore", "ignore", "pipe"] },
   );
   const output = xvfb.stdio[3];

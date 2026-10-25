@@ -3011,18 +3011,30 @@ html[data-keyboard="true"] .suggestions {
 }
 .city-browser-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  position: relative;
+}
+.city-browser-controls button {
+  min-height: 44px;
+  min-width: 44px;
 }
 .city-browser-keyboard {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  opacity: 0;
-  bottom: 0;
-  left: 0;
+  flex-basis: 100%;
+  min-height: 44px;
   font-size: 16px;
+}
+.city-browser:fullscreen {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  overflow: auto;
+  background: var(--background);
+  color: var(--foreground);
+  grid-template-rows: auto auto minmax(180px, 1fr) auto auto;
+}
+.city-browser:fullscreen .city-browser-screen {
+  height: 100%;
 }
 
 .city-browser-screen[hidden],

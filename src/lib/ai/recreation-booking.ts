@@ -150,7 +150,7 @@ export class RecreationBooking {
           headless: false,
           args: [
             "--disable-http2",
-            "--window-size=430,900",
+            "--window-size=1280,900",
             "--window-position=0,0",
             "--force-device-scale-factor=1",
           ],
@@ -167,7 +167,7 @@ export class RecreationBooking {
         });
         this.context = await this.browser.newContext({
           acceptDownloads: true,
-          viewport: { width: 430, height: 790 },
+          viewport: { width: 1280, height: 790 },
         });
         // An in-memory incognito context. No persistent profile, password capture,
         // storageState, tracing, console forwarding or model browser tools.
