@@ -9,7 +9,7 @@ import {
 import { AdmissionError } from "@/lib/ai/run-queue";
 import { z } from "zod";
 import { createCityAgent, gatewayConfigured } from "@/lib/ai/agent";
-import { publicAIError } from "@/lib/ai/errors";
+import { aiFailureCode, publicAIError } from "@/lib/ai/errors";
 import { getSession, removeSession, sessionCookie } from "@/lib/ai/session";
 import { sameOrigin } from "@/lib/ai/policy";
 
@@ -96,12 +96,24 @@ export async function POST(request: Request) {
     previousIndex >= 0 ? session.messages.slice(0, previousIndex) : session.messages;
   const messages = [...previous.slice(-30), userMessage];
   const runStarted = performance.now();
+  const requestId = randomUUID();
+  const reportError = (error: unknown) => {
+    // Fixed codes only: no prompts, provider response bodies or private evidence.
+    console.warn(
+      JSON.stringify({
+        event: "city_agent_error",
+        requestId,
+        code: error instanceof AdmissionError ? "admission" : aiFailureCode(error),
+        elapsedMs: Math.round(performance.now() - runStarted),
+      }),
+    );
+    return error instanceof AdmissionError ? error.message : publicAIError(error);
+  };
   const stream = createUIMessageStream({
     onEnd: ({ isCancelled, isAborted }) => {
       if (isCancelled || isAborted) stop.abort();
     },
-    onError: (error) =>
-      error instanceof AdmissionError ? error.message : publicAIError(error),
+    onError: reportError,
     execute: async ({ writer }) => {
       try {
         releaseUsage = await reserveRun(session.id, signal);
@@ -115,7 +127,7 @@ export async function POST(request: Request) {
             abortSignal: signal,
             timeout: { totalMs: 180_000 },
             sendReasoning: false,
-            onError: publicAIError,
+            onError: reportError,
             onEnd: async ({ messages: completed, isAborted, isCancelled, outcome }) => {
               if (!isAborted && !isCancelled && outcome.status === "completed")
                 session.messages = completed;
@@ -123,6 +135,9 @@ export async function POST(request: Request) {
                 "recreationBookingStatus",
                 "prepareRecreationBooking",
                 "recreationSearch",
+                "searchTennisCourts",
+                "recreationServiceGuide",
+                "prepareTennisReservation",
                 "lookupVotingPlace",
                 "browserOpen",
                 "browserObserve",

@@ -8,6 +8,8 @@ import {
 } from "./remote-desktop.ts";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { ExecutionTimings } from "./timing.ts";
+import { TennisBooking } from "./tennis-booking.ts";
+import type { TennisResource } from "./tennis-contracts.ts";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -35,6 +37,7 @@ export class RecreationBooking {
   private owner: string;
   private residentPaused = false;
   private pendingActivityUrl: string | undefined;
+  private tennis: TennisBooking | undefined;
   constructor(owner: string = randomUUID()) {
     this.owner = owner;
   }
@@ -42,9 +45,12 @@ export class RecreationBooking {
     const desktop = residentDesktops.get(this.owner);
     const allowed =
       !this.residentPaused &&
-      ["sign_in_required", "resident_action_required", "needs_attention"].includes(
-        this.state.status,
-      );
+      [
+        "sign_in_required",
+        "resident_action_required",
+        "resident_checkout_required",
+        "needs_attention",
+      ].includes(this.state.status);
     if (desktop) desktop.interactive = allowed;
     return desktop && allowed
       ? {
@@ -59,6 +65,16 @@ export class RecreationBooking {
     this.residentView();
   }
   async requestPreparation(url: string) {
+    if (
+      this.tennis &&
+      ["outcome_unknown", "resident_checkout_required", "confirmed"].includes(
+        this.state.status,
+      )
+    )
+      throw new BookingStepError(
+        "Reconcile the current court reservation before starting another booking.",
+      );
+    this.tennis = undefined;
     const approved = new URL(approvedPageUrl(url));
     if (!/^\/toronto\/activity\/search\/detail\/\d+$/.test(approved.pathname))
       throw new BookingStepError("Choose a City activity detail page.");
@@ -66,6 +82,65 @@ export class RecreationBooking {
     if (!this.page || this.page.isClosed()) return this.connect();
     if (this.state.status === "sign_in_required") return this.snapshot();
     return this.prepare(url);
+  }
+  requestTennisPreparation(resource: TennisResource) {
+    if (
+      [
+        "confirmed",
+        "outcome_unknown",
+        "executing",
+        "resident_checkout_required",
+      ].includes(this.state.status)
+    )
+      throw new BookingStepError(
+        "Review or reconcile the existing reservation before starting another.",
+      );
+    this.pendingActivityUrl = undefined;
+    delete this.approval;
+    this.tennis = new TennisBooking(resource);
+    this.state = this.tennis.snapshot();
+    return this.snapshot();
+  }
+  async setTennisRequest(input: unknown) {
+    if (!this.tennis)
+      throw new BookingStepError("Choose a court from the live City listing first.");
+    this.tennis.setRequest(input);
+    this.state = this.tennis.snapshot();
+    if (!this.page || this.page.isClosed()) return this.connect();
+    if (
+      !(await this.page
+        .getByRole("link", { name: "Sign Out", exact: true })
+        .isVisible())
+    ) {
+      this.state.status = "sign_in_required";
+      this.state.message =
+        "Sign in directly in the City browser, then continue to check court availability.";
+      return this.snapshot();
+    }
+    try {
+      await this.tennis.prepare(this.page);
+    } finally {
+      this.state = this.tennis.snapshot();
+    }
+    return this.snapshot();
+  }
+  async authorizeTennisCheckout(id: string, digest: string) {
+    if (!this.tennis) throw new BookingStepError("No court checkout is available.");
+    try {
+      await this.tennis.authorizeCheckout(this.requirePage(), id, digest);
+    } finally {
+      this.state = this.tennis.snapshot();
+    }
+    return this.snapshot();
+  }
+  async verifyTennisPermit() {
+    if (!this.tennis) throw new BookingStepError("No court checkout exists to verify.");
+    try {
+      await this.tennis.verifyPermit(this.requirePage());
+    } finally {
+      this.state = this.tennis.snapshot();
+    }
+    return this.snapshot();
   }
   pauseResidentControl() {
     this.residentPaused = true;
@@ -100,10 +175,20 @@ export class RecreationBooking {
             },
           }
         : {}),
+      ...(this.state.facilityReview
+        ? {
+            facilityReview: {
+              ...this.state.facilityReview,
+              expired: Date.now() >= this.state.facilityReview.expiresAt,
+            },
+          }
+        : {}),
       timings: [...this.timing.spans],
       operations: this.operations ?? [],
       canReconcile: Boolean(
-        this.approval?.consumed && this.page && !this.page.isClosed(),
+        (this.approval?.consumed || this.tennis?.snapshot().canReconcile) &&
+        this.page &&
+        !this.page.isClosed(),
       ),
     };
   }
@@ -193,6 +278,9 @@ export class RecreationBooking {
         message:
           "Sign in in the secure City browser below, then choose I’m signed in. Toronto One does not read your password or MFA codes.",
         timings: [],
+        ...(this.tennis?.snapshot().facility
+          ? { facility: this.tennis.snapshot().facility }
+          : {}),
       };
       if (confirmed)
         this.state.message =
@@ -249,6 +337,31 @@ export class RecreationBooking {
   }
   async resume() {
     this.pauseResidentControl();
+    if (this.tennis) {
+      // Preserve the private signed-in context during local adapter development.
+      if (process.env.NODE_ENV === "development")
+        Object.setPrototypeOf(this.tennis, TennisBooking.prototype);
+      if (
+        this.state.status === "confirmed" ||
+        this.state.status === "facility_details_required"
+      )
+        return this.snapshot();
+      const page = this.requirePage();
+      if (
+        !(await page.getByRole("link", { name: "Sign Out", exact: true }).isVisible())
+      ) {
+        this.state.status = "sign_in_required";
+        this.state.message =
+          "Complete City sign-in, then continue the court reservation.";
+        return this.snapshot();
+      }
+      try {
+        await this.tennis.resume(page);
+      } finally {
+        this.state = this.tennis.snapshot();
+      }
+      return this.snapshot();
+    }
     if (["executing", "outcome_unknown", "confirmed"].includes(this.state.status))
       return this.snapshot();
     const page = this.requirePage();
@@ -615,6 +728,7 @@ export class RecreationBooking {
     return this.snapshot();
   }
   async captureReceipt() {
+    if (this.tennis) return this.verifyTennisPermit();
     await this.refreshNavigationPolicy();
     const page = this.requirePage();
     if (!this.approval?.consumed)
@@ -727,9 +841,17 @@ export class RecreationBooking {
     return this.snapshot();
   }
   receiptPath() {
-    return this.receiptFile;
+    return this.tennis ? this.tennis.receiptPath() : this.receiptFile;
   }
   async capturePrintableReceipt() {
+    if (this.tennis) {
+      try {
+        await this.tennis.capturePrintablePermit(this.requirePage());
+      } finally {
+        this.state = this.tennis.snapshot();
+      }
+      return this.snapshot();
+    }
     await this.refreshNavigationPolicy();
     const page = this.requirePage();
     const approval = this.approval;
@@ -813,11 +935,12 @@ export class RecreationBooking {
     return this.snapshot();
   }
   receiptPdfPath() {
-    return this.receiptPdfFile;
+    return this.tennis ? this.tennis.receiptPdfPath() : this.receiptPdfFile;
   }
   async close() {
     this.residentPaused = false;
     this.pendingActivityUrl = undefined;
+    this.tennis = undefined;
     await this.context?.close().catch(() => undefined);
     await this.browser?.close().catch(() => undefined);
     await closeResidentDesktop(this.owner);

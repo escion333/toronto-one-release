@@ -8,9 +8,9 @@ import { privateBookingDirectory } from "./booking-approval.ts";
 const ownerSchema = z.string().uuid();
 const artifactSchema = z
   .string()
-  .regex(/^[a-f0-9-]{36}-(?:official-)?receipt\.(?:png|pdf)$/);
+  .regex(/^[a-f0-9-]{36}-(?:(?:official-)?receipt|permit)\.(?:png|pdf)$/);
 const stateSchema = bookingStateSchema
-  .omit({ review: true, participants: true })
+  .omit({ review: true, facilityReview: true, participants: true })
   .extend({ status: z.literal("confirmed") });
 const checkpointSchema = z.object({
   owner: ownerSchema,

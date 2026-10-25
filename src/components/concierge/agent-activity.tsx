@@ -19,6 +19,9 @@ const labels: Record<string, string> = {
   citeSource: "Check source excerpts",
   recreationBookingStatus: "Read booking status",
   recreationSearch: "Find recreation sessions",
+  searchTennisCourts: "Find tennis courts",
+  recreationServiceGuide: "Check recreation service",
+  prepareTennisReservation: "Prepare court request",
   lookupVotingPlace: "Find voting information",
   prepareRecreationBooking: "Prepare reservation",
 };
@@ -42,6 +45,8 @@ export function AgentActivity({
     "browserObserve",
     "browserAct",
     "recreationSearch",
+    "searchTennisCourts",
+    "recreationServiceGuide",
     "lookupVotingPlace",
     "publishResult",
     "citeSource",

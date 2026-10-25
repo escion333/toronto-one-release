@@ -6,6 +6,7 @@ import { ChevronRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CityBrowser } from "./city-browser";
+import { TennisReservationForm } from "./tennis-reservation-form";
 import type { useRecreationBooking } from "./use-recreation-booking";
 
 export function RecreationBookingPanel({
@@ -19,10 +20,14 @@ export function RecreationBookingPanel({
   const [approvedId, setApprovedId] = useState<string | null>(null);
   const residentStep =
     state &&
-    (!accountOnly || (state.status === "sign_in_required" && !state.activity)) &&
-    ["sign_in_required", "resident_action_required", "needs_attention"].includes(
-      state.status,
-    );
+    (!accountOnly ||
+      (state.status === "sign_in_required" && !state.activity && !state.facility)) &&
+    [
+      "sign_in_required",
+      "resident_action_required",
+      "resident_checkout_required",
+      "needs_attention",
+    ].includes(state.status);
   const review =
     !accountOnly && state?.status === "review_required" ? state.review : undefined;
   const expired = Boolean(review?.expired);
@@ -43,7 +48,7 @@ export function RecreationBookingPanel({
                 ? accountOnly
                   ? "Updating your City account…"
                   : "Working on your City booking…"
-                : accountOnly && state?.activity
+                : accountOnly && (state?.activity || state?.facility)
                   ? "Manage the City account connected to your reservation."
                   : (state?.message ?? "Sign in when you’re ready to reserve.")}
             </p>
@@ -51,8 +56,10 @@ export function RecreationBookingPanel({
         </div>
         {!accountOnly && state?.status === "confirmed" && (
           <span className="booking-status">
-            <ShieldCheck size={14} aria-hidden="true" /> Official receipt and City
-            account matched
+            <ShieldCheck size={14} aria-hidden="true" />{" "}
+            {state.receipt?.documentKind === "permit"
+              ? "Official permit and City account matched"
+              : "Official receipt and City account matched"}
           </span>
         )}
         {!accountOnly && state?.activity && (
@@ -63,6 +70,74 @@ export function RecreationBookingPanel({
             <p className="card-footnote">{state.activity.feeNotice}</p>
           </div>
         )}
+        {!accountOnly && state?.facility && (
+          <div className="inline-booking-details">
+            <h3>{state.facility.name}</h3>
+            {state.facility.request && (
+              <>
+                <p>
+                  {state.facility.request.date} · {state.facility.request.startTime} · 1
+                  hour · Toronto time
+                </p>
+                <p>
+                  {state.facility.request.attendees} people · maximum{" "}
+                  {(state.facility.request.maxTotalCents / 100).toLocaleString(
+                    "en-CA",
+                    { style: "currency", currency: "CAD" },
+                  )}{" "}
+                  CAD
+                </p>
+              </>
+            )}
+          </div>
+        )}
+        {!accountOnly && state?.status === "facility_details_required" && (
+          <TennisReservationForm booking={booking} />
+        )}
+        {!accountOnly &&
+          state?.facilityReview &&
+          state.status === "review_required" && (
+            <section
+              className="inline-approval"
+              aria-label="Review court reservation and charges"
+            >
+              <p>
+                Booking for: <strong>{state.facilityReview.participant}</strong>
+              </p>
+              <div className="approval-total">
+                <span>City total</span>
+                <strong>
+                  {(state.facilityReview.totalCents / 100).toLocaleString("en-CA", {
+                    style: "currency",
+                    currency: "CAD",
+                  })}{" "}
+                  <small>CAD</small>
+                </strong>
+              </div>
+              <p>
+                You personally review legal terms, sign and complete payment with the
+                City. Continuing here does not submit payment.
+              </p>
+              {state.facilityReview.expired && (
+                <p role="status">This review expired. Review the City cart again.</p>
+              )}
+              <Button
+                className="w-full"
+                disabled={busy || state.facilityReview.expired}
+                onClick={() => {
+                  if (state.facilityReview)
+                    void action({
+                      action: "tennis_checkout",
+                      id: state.facilityReview.id,
+                      digest: state.facilityReview.digest,
+                      approved: true,
+                    });
+                }}
+              >
+                Continue to City checkout
+              </Button>
+            </section>
+          )}
         {residentStep && !busy && (
           <CityBrowser key={`${state.status}:${state.activity?.number ?? "signin"}`} />
         )}
@@ -152,7 +227,11 @@ export function RecreationBookingPanel({
         )}
         {!accountOnly && state?.receipt && (
           <div className="booking-receipt space-y-2 border-t pt-3">
-            <p>Official receipt #{state.receipt.number}</p>
+            <p>
+              {state.receipt.documentKind === "permit"
+                ? `Official permit #${state.receipt.permitNumber}`
+                : `Official receipt #${state.receipt.number}`}
+            </p>
             {!state.receipt.accountVerified && <p>Account match not yet verified.</p>}
             <a
               className="official-link"
@@ -160,13 +239,23 @@ export function RecreationBookingPanel({
               target="_blank"
               rel="noreferrer"
             >
-              View official receipt
+              {state.receipt.documentKind === "permit"
+                ? "Download official permit"
+                : "View official receipt"}
             </a>
             <details className="inline-receipt">
-              <summary>Show official receipt</summary>
+              <summary>
+                {state.receipt.documentKind === "permit"
+                  ? "Show official permit"
+                  : "Show official receipt"}
+              </summary>
               <Image
                 src={appPath("/api/recreation/receipt")}
-                alt="Your official City of Toronto receipt"
+                alt={
+                  state.receipt.documentKind === "permit"
+                    ? "Your official City of Toronto court permit"
+                    : "Your official City of Toronto receipt"
+                }
                 width={1000}
                 height={1400}
                 unoptimized
@@ -208,14 +297,23 @@ export function RecreationBookingPanel({
             disabled={busy}
             onClick={() => {
               setApprovedId(null);
-              void action({ action: "resume" });
+              void action({
+                action:
+                  state.status === "resident_checkout_required"
+                    ? "verify_permit"
+                    : "resume",
+              });
             }}
           >
-            {state.status === "sign_in_required"
-              ? "I’m signed in · Continue"
-              : state.status === "resident_action_required"
-                ? "I’ve completed the City step"
-                : "Resume booking"}
+            {state.status === "resident_checkout_required"
+              ? "I’ve completed City checkout · Verify permit"
+              : state.status === "sign_in_required"
+                ? "I’m signed in · Continue"
+                : state.status === "resident_action_required"
+                  ? state.facility
+                    ? "Review City cart"
+                    : "I’ve completed the City step"
+                  : "Resume booking"}
           </Button>
         )}
         <details className="booking-details booking-secondary">

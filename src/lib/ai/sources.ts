@@ -96,7 +96,9 @@ export function messageSources(message: CityUIMessage): {
         part.type === "tool-browserObserve" ||
         part.type === "tool-browserAct" ||
         part.type === "tool-lookupVotingPlace" ||
-        part.type === "tool-recreationSearch") &&
+        part.type === "tool-recreationSearch" ||
+        part.type === "tool-searchTennisCourts" ||
+        part.type === "tool-recreationServiceGuide") &&
       part.state === "output-available"
     ) {
       const observed = part.output;

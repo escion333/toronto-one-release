@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { ExecutionTimings } from "./timing.ts";
 import type { VotingLookup } from "./contracts.ts";
 import { normalizeStreet, votingVenue } from "./voting.ts";
+import { tennisBookingUrl } from "./tennis-contracts.ts";
 import {
   allowedActions,
   addressSuggestionAllowed,
@@ -20,6 +21,7 @@ export type Observation = {
   text: string;
   controls: (BrowserControl & { actions: BrowserAction[] })[];
   voting?: { lookup: VotingLookup; venue?: { name: string; address: string } };
+  tennisCourts?: string[];
 };
 const resourceHosts = new Set([
   "myvote.toronto.ca",
@@ -107,6 +109,18 @@ export class CityBrowser {
     await this.settle(page);
     return this.observe();
   }
+  async searchTennisCourts(): Promise<Observation> {
+    await this.open(tennisBookingUrl);
+    const page = await this.getPage();
+    await page
+      .getByRole("heading", { name: "Quick reservation", exact: true })
+      .waitFor();
+    await page
+      .getByRole("link", { name: /^Court - / })
+      .first()
+      .waitFor();
+    return this.observe();
+  }
   async lookupVotingPlace(lookup: VotingLookup): Promise<Observation> {
     let observed = await this.open("https://myvote.toronto.ca/home");
     const one = (matches: (control: BrowserControl) => boolean) => {
@@ -176,7 +190,13 @@ export class CityBrowser {
     await this.timing.measure("page_loading", () =>
       page.waitForLoadState("domcontentloaded"),
     );
-    if (page.url().includes("activecommunities")) {
+    if (new URL(page.url()).pathname === "/toronto/reservation/landing/quick") {
+      await this.timing.measure("external_wait", () =>
+        page
+          .getByRole("heading", { name: "Quick reservation", exact: true })
+          .waitFor({ timeout: 12_000 }),
+      );
+    } else if (page.url().includes("activecommunities")) {
       await this.timing.measure("external_wait", () =>
         page
           .getByText(/matching result\(s\)|Activity meeting dates|No activities found/i)
@@ -291,6 +311,21 @@ export class CityBrowser {
         });
       return { text, controls, title: document.title };
     });
+    const tennisCourts =
+      new URL(url).pathname === "/toronto/reservation/landing/quick"
+        ? await page.getByRole("link", { name: /^Court - / }).evaluateAll((elements) =>
+            elements
+              .filter((element) => element.getBoundingClientRect().width > 0)
+              .map(
+                (element) =>
+                  element.getAttribute("aria-label") ?? element.textContent ?? "",
+              )
+              .filter((name) => /^Court - \d+ - .+/.test(name))
+              .slice(0, 100),
+          )
+        : [];
+    if (tennisCourts.length)
+      data.text += "\nCourts listed:\n" + tennisCourts.join("\n");
     if (
       /verify you are human|access denied|unusual traffic|complete the captcha/i.test(
         data.text,
@@ -305,6 +340,7 @@ export class CityBrowser {
       title: data.title,
       checkedAt: new Date().toISOString(),
       text: data.text,
+      ...(tennisCourts.length ? { tennisCourts } : {}),
       controls: data.controls
         .map((c) => {
           const control = {

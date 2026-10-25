@@ -57,6 +57,12 @@ const suggestions = [
       "Help me find City of Toronto recreation activities. Ask me what I’d like to play, where and when. Do not book anything.",
     icon: CalendarDays,
   },
+  {
+    title: "Reserve a tennis court",
+    request:
+      "Help me reserve a City of Toronto tennis court. Show the actual court booking resources and explain availability and fees. My maximum total starts at $0; do not sign in or submit a reservation for me.",
+    icon: CalendarDays,
+  },
 ];
 export type CityAgentView = Pick<
   ReturnType<typeof useCityAgent>,
@@ -466,10 +472,13 @@ export function TorontoOneView({
                   <div className="surface-title tasks-title">
                     <h1 id="tasks-heading">Tasks</h1>
                     <Badge variant="secondary">
-                      {agent.results.length + (agent.booking.state?.activity ? 1 : 0)}
+                      {agent.results.length +
+                        (agent.booking.state?.activity || agent.booking.state?.facility
+                          ? 1
+                          : 0)}
                     </Badge>
                   </div>
-                  {agent.booking.state?.activity && (
+                  {(agent.booking.state?.activity || agent.booking.state?.facility) && (
                     <RecreationBookingPanel booking={agent.booking} />
                   )}
                   {agent.results.length ? (
@@ -487,7 +496,8 @@ export function TorontoOneView({
                         />
                       ))}
                     </div>
-                  ) : !agent.booking.state?.activity ? (
+                  ) : !agent.booking.state?.activity &&
+                    !agent.booking.state?.facility ? (
                     <div className="empty-state">
                       <AgentMascot state="idle" size="companion" motion="off" />
                       <h2>Nothing here yet.</h2>
