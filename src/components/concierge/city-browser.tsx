@@ -76,6 +76,13 @@ export function CityBrowser() {
   }
   function sendText(text: string) {
     if (!connected) return;
+    // A clipboard shortcut can lose its key-up when focus leaves the canvas.
+    // Release remote modifiers so pasted text cannot become City shortcuts.
+    for (const modifier of [
+      0xffe1, 0xffe2, 0xffe3, 0xffe4, 0xffe7, 0xffe8, 0xffe9, 0xffea, 0xffeb, 0xffec,
+    ]) {
+      connection.current?.sendKey(modifier, null, false);
+    }
     // Send transient input directly over the private connection, never through chat,
     // React state, storage, telemetry, or the remote clipboard.
     for (const character of text) {
