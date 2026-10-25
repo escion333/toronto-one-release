@@ -178,7 +178,6 @@ export function CityBrowser() {
             const code = {
               Backspace: 0xff08,
               Enter: 0xff0d,
-              Tab: 0xff09,
               Escape: 0xff1b,
             }[event.key];
             if (code) {
