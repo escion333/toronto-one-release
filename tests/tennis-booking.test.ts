@@ -128,6 +128,65 @@ test("approval binds complete court request, booking name and amount and expires
   plan.consumed = true;
   assert.throws(() => verifyTennisApproval(plan, plan.id, plan.digest, payload, 1001));
 });
+test("quick-reservation checkout reviews the expanded cart and full cost even with account credit", async () => {
+  const directory = await mkdtemp(path.join(tmpdir(), "tennis-cart-layout-"));
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
+  let due = "18.40";
+  let attendees = 2;
+  let bookingCount = 1;
+  let day = 26;
+  await context.route("**/*", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === "/toronto/quickreservation/checkout") {
+      await route.fulfill({
+        contentType: "text/html",
+        body: "<h1>Check Out</h1><button>Pay</button>",
+      });
+    } else if (pathname === "/toronto/newcart") {
+      await route.fulfill({
+        contentType: "text/html",
+        body: `<main id="main-content-body"><h1>Shopping Cart</h1><h2>Fixture<br>Resident</h2><p>1 item, $${due} in total.</p><a href="#" onclick="document.querySelector('#details').hidden=false;return false">Tennis $${due}</a><p>QUICK RESERVATION</p><p>Unrelated event text: October 26, 2026 6:00 PM - 7:00 PM</p><p>1 Resource(s): ${resource.name}</p><p>Number of booking(s): ${bookingCount}</p><div id="details" hidden><p>${resource.name}</p><p><span>Oct ${day}, 2026</span><span>6:00PM -7:00PM</span></p><p>Attendee(s): ${attendees}</p></div><p>Subtotal $16.50</p><p>Taxes $1.90</p><p>Due Now $${due}</p><a href="#" aria-label="delete transaction Tennis $${due}">Delete</a><button>Check out</button></main>`,
+      });
+    } else await route.abort();
+  });
+  const page = await context.newPage();
+  const base = new URL(tennisBookingUrl).origin;
+  try {
+    const flow = new TennisBooking(resource, { directory, now: () => now });
+    flow.setRequest(request);
+    await page.goto(base + "/toronto/quickreservation/checkout");
+    await assert.rejects(flow.review(page), /maximum charge/);
+    assert.equal(new URL(page.url()).pathname, "/toronto/newcart");
+    due = "0.00";
+    await page.reload();
+    await assert.rejects(flow.review(page), /maximum charge/);
+    flow.setRequest({ ...request, maxTotalCents: 2000 });
+    const review = await flow.review(page);
+    assert.equal(review.status, "review_required");
+    assert.equal(review.facilityReview?.totalCents, 1840);
+    assert.equal(review.facilityReview?.participant, "Fixture Resident");
+    day = 27;
+    await page.reload();
+    await assert.rejects(flow.review(page), /exactly the selected court, date/);
+    day = 26;
+    bookingCount = 2;
+    await page.reload();
+    await assert.rejects(flow.review(page), /exactly one court and one booking/);
+    bookingCount = 1;
+    attendees = 3;
+    await page.reload();
+    await assert.rejects(flow.review(page), /attendee count/);
+    assert.equal(
+      await priorTennisAttempt({ ...payload, totalCents: 1840 }, directory),
+      false,
+    );
+  } finally {
+    await context.close();
+    await browser.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 test("permit confirmation needs official document plus matching account, identity, total and active status", () => {
   assert.equal(verifyTennisPermit(permit, record, payload, "R1000"), "P1000");
   for (const text of [

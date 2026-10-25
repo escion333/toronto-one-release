@@ -338,6 +338,9 @@ export class RecreationBooking {
   async resume() {
     this.pauseResidentControl();
     if (this.tennis) {
+      // Preserve the private signed-in context during local adapter development.
+      if (process.env.NODE_ENV === "development")
+        Object.setPrototypeOf(this.tennis, TennisBooking.prototype);
       if (
         this.state.status === "confirmed" ||
         this.state.status === "facility_details_required"

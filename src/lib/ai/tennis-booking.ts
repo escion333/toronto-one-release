@@ -16,6 +16,7 @@ import {
   tennisBookingUrl,
   TennisStepError,
   readTennisCheckout,
+  readTennisTotal,
   validateTennisRequest,
   verifyTennisPermit,
   matchesTennisIdentity,
@@ -165,21 +166,86 @@ export class TennisBooking {
     if (this.approval?.consumed) return this.verifyPermit(page);
     return this.prepared ? this.review(page) : this.prepare(page);
   }
+  private async checkout(page: Page) {
+    const request = this.request;
+    if (!request) throw new TennisStepError("Choose a court date and time first.");
+    const main = page.locator("#main-content-body");
+    let text = await main.innerText();
+    if (/\b1\s+item\b/i.test(text) && /QUICK\s+RESERVATION/i.test(text)) {
+      const attendees = main.getByText(/^Attendee\(s\):\s*\d+$/i);
+      if (!(await attendees.isVisible())) {
+        const item = main.getByRole("link", {
+          name: /^(?!delete transaction\b).+\$[\d,]+\.\d{2}$/i,
+        });
+        if ((await item.count()) !== 1)
+          throw new TennisStepError(
+            "The single court cart item could not be identified. Inspect the existing City cart; do not start another reservation.",
+          );
+        await item.click();
+        await attendees.waitFor();
+        text = await main.innerText();
+      }
+      if (
+        !/\b1\s+Resource\(s\):/i.test(text) ||
+        !/Number of booking\(s\):\s*1\b/i.test(text)
+      )
+        throw new TennisStepError(
+          "The City cart must contain exactly one court and one booking.",
+        );
+      const court = main
+        .getByText(this.resource.name, { exact: true })
+        .filter({ visible: true });
+      const intervalPattern =
+        /^([A-Z][a-z]{2,8}\s+\d{1,2},\s+\d{4})\s*(\d{1,2}:\d{2}\s*(?:AM|PM))\s*[-–—]\s*(\d{1,2}:\d{2}\s*(?:AM|PM))$/i;
+      const interval = main.getByText(intervalPattern).filter({ visible: true });
+      const holder = main.getByRole("heading", { level: 2 });
+      const ambiguous = [
+        { label: "booking name", count: await holder.count() },
+        { label: "court", count: await court.count() },
+        { label: "time", count: await interval.count() },
+        { label: "attendee count", count: await attendees.count() },
+      ]
+        .filter((field) => field.count !== 1)
+        .map((field) => field.label);
+      if (ambiguous.length)
+        throw new TennisStepError(
+          `The City cart does not show one unambiguous ${ambiguous.join(", ")}. Review the existing selection; no payment handoff was authorized.`,
+        );
+      const participant = (await holder.innerText()).replace(/\s+/g, " ").trim();
+      const times = (await interval.innerText()).match(intervalPattern);
+      if (!times?.[1] || !times[2] || !times[3])
+        throw new TennisStepError("The City court interval could not be read.");
+      const displayTime = (value: string) => value.replace(/\s*(AM|PM)$/i, " $1");
+      const totalCents = readTennisTotal(text);
+      if (totalCents === undefined)
+        throw new TennisStepError(
+          "The complete City cart charges could not be verified.",
+        );
+      // Only structurally identified fields establish identity; unrelated cart
+      // copy or an event name cannot supply a missing/mismatched date or time.
+      text = `1 item\n${await court.innerText()}\n${times[1]}\n${displayTime(times[2])}\n${displayTime(times[3])}\n${await attendees.innerText()}\nReserved for\n${participant}\nTotal $${(totalCents / 100).toFixed(2)}`;
+    }
+    return readTennisCheckout(text, this.resource, request);
+  }
   async review(page: Page) {
     if (this.approval?.consumed) return this.verifyPermit(page);
     if (!this.request) throw new TennisStepError("Choose a court date and time first.");
-    const current = new URL(page.url());
+    let current = new URL(page.url());
+    if (
+      current.origin === origin &&
+      current.pathname === "/toronto/quickreservation/checkout"
+    ) {
+      // Read the existing cart; never click the payment screen's Pay control.
+      await page.goto(`${origin}/toronto/newcart`, { waitUntil: "domcontentloaded" });
+      current = new URL(page.url());
+    }
     if (current.origin !== origin || current.pathname !== "/toronto/newcart") {
       this.state.status = "resident_action_required";
       this.state.message =
         "Continue the selected court reservation to the City cart, then choose Review City cart here. You complete all City declarations, signatures and payment yourself.";
       return this.snapshot();
     }
-    const payload = readTennisCheckout(
-      await page.locator("#main-content-body").innerText(),
-      this.resource,
-      this.request,
-    );
+    const payload = await this.checkout(page);
     if (await priorTennisAttempt(payload, this.directory)) {
       this.state.status = "outcome_unknown";
       this.state.message =
@@ -214,11 +280,7 @@ export class TennisBooking {
       new URL(page.url()).pathname !== "/toronto/newcart"
     )
       throw new TennisStepError("Review the current City cart before continuing.");
-    const current = readTennisCheckout(
-      await page.locator("#main-content-body").innerText(),
-      this.resource,
-      this.request,
-    );
+    const current = await this.checkout(page);
     const approval = verifyTennisApproval(this.approval, id, digest, current);
     await journalTennisAttempt(approval, undefined, this.directory);
     approval.consumed = true;

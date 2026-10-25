@@ -150,7 +150,21 @@ export function readTennisTotal(
   const charges = amounts(
     /\b(?:Total Paid|Amount Paid|Grand Total|Total(?:\s*\(CAD\))?)\s*:?\s*\$([\d,]+\.\d{2})(?:\s*CAD)?/gi,
   );
-  const totals = charges.length ? charges : due;
+  const subtotals =
+    mode === "checkout" ? amounts(/\bSubtotal\s*:?\s*\$([\d,]+\.\d{2})/gi) : [];
+  const taxes =
+    mode === "checkout" ? amounts(/\bTax(?:es)?\s*:?\s*\$([\d,]+\.\d{2})/gi) : [];
+  const subtotal = [...new Set(subtotals)];
+  const tax = [...new Set(taxes)];
+  if ((subtotal.length || tax.length) && (subtotal.length !== 1 || tax.length !== 1))
+    return undefined;
+  const complete =
+    subtotal[0] !== undefined && tax[0] !== undefined
+      ? subtotal[0] + tax[0]
+      : undefined;
+  if (complete !== undefined && charges.some((amount) => amount !== complete))
+    return undefined;
+  const totals = charges.length ? charges : complete !== undefined ? [complete] : due;
   const unique = [...new Set(totals)];
   return unique.length === 1 &&
     Number.isSafeInteger(unique[0]) &&
@@ -164,13 +178,13 @@ export function readTennisCheckout(
   resource: TennisResource,
   request: TennisRequest,
 ): TennisCheckout {
-  if (!/\b1 item\b/i.test(text) || !matchesTennisIdentity(text, resource, request))
+  if (!/\b1\s+item\b/i.test(text) || !matchesTennisIdentity(text, resource, request))
     throw new TennisStepError(
       "The City cart must contain exactly the selected court, date and one-hour time. Review the existing selection in the City browser.",
     );
   const participant = tennisParticipant(text);
   const attendees =
-    /(?:Attendees|Attendance|Number of (?:attendees|participants))\s*:?\s*(\d+)/i.exec(
+    /(?:Attendees?|Attendee\(s\)|Attendance|Number of (?:attendees|participants))\s*:?\s*(\d+)/i.exec(
       text,
     )?.[1];
   const totalCents = readTennisTotal(text);
