@@ -30,7 +30,7 @@ export async function hashClientAddress(address: string, salt: string) {
 /** Soft edge protection only: isolated memory is bounded and never stores raw IPs. */
 export class ChatAdmission {
   private readonly buckets = new Map<string, Bucket>();
-  private readonly salt = crypto.randomUUID();
+  private salt: string | undefined;
   private readonly maxEntries: number;
 
   constructor(maxEntries = 4096) {
@@ -44,6 +44,8 @@ export class ChatAdmission {
   }
 
   async admit(request: Request, now = Date.now()) {
+    // Workers permit random generation inside a request, not module initialization.
+    this.salt ??= crypto.randomUUID();
     // CF-Connecting-IP is supplied by Cloudflare at this Worker boundary.
     // Missing platform headers share one conservative fallback bucket.
     const key = await hashClientAddress(
