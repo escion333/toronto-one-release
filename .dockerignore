@@ -1,0 +1,17 @@
+.git
+.next
+node_modules
+.env*
+.local
+.wrangler
+assets
+tools
+AGENTS.md
+docs/research
+docs/validation
+docs/character
+*.log
+*.tsbuildinfo
+
+**/.wrangler
+Dockerfile.padding

@@ -7,16 +7,15 @@ import {
   ClipboardList,
   MessageCircle,
   Moon,
-  Plus,
   Settings2,
   RotateCcw,
-  ShieldCheck,
   Sun,
   Trash2,
   Vote,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { AgentMascot } from "@/components/agent/agent-mascot";
+import { BrandLogo } from "@/components/brand-logo";
 import { agentStateLabels } from "@/lib/ai/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useCityAgent } from "./use-city-agent";
 import { CityResultCard } from "./city-result-card";
+import { ResidentInput } from "./resident-input";
 import { RecreationBookingPanel } from "./recreation-booking-panel";
 import { ConversationComposer } from "./conversation-composer";
 import { MessageBubble } from "./message-bubble";
@@ -42,7 +42,6 @@ type Surface = "concierge" | "tasks" | "you";
 const navigation = [
   { id: "concierge", label: "Chat", icon: MessageCircle },
   { id: "tasks", label: "Tasks", icon: ClipboardList },
-  { id: "you", label: "Settings", icon: Settings2 },
 ] as const;
 const suggestions = [
   {
@@ -52,9 +51,9 @@ const suggestions = [
     icon: Vote,
   },
   {
-    title: "Find something to play",
+    title: "Find recreation activities",
     request:
-      "Find adult badminton at Canoe Landing next week. If the sessions are full, check another adult sport there and show me a real option. Do not book anything.",
+      "Help me find City of Toronto recreation activities. Ask me what I’d like to play, where and when. Do not book anything.",
     icon: CalendarDays,
   },
 ];
@@ -113,7 +112,7 @@ export function TorontoOneView({
     (message) => message.role === "assistant",
   );
   const activeAssistant =
-    latestAssistant?.id === agent.messages.at(-1)?.id ? latestAssistant : undefined;
+    latestAssistant === agent.messages.at(-1) ? latestAssistant : undefined;
   const hasActiveSteps =
     activeAssistant?.parts.some(
       (part) =>
@@ -166,33 +165,48 @@ export function TorontoOneView({
     setInput("");
     void agent.send(text);
   }
-  async function newConversation() {
-    if (await agent.clear()) {
-      readingPositions.current.concierge = { top: 0, follow: true };
-      follow.current = true;
-      setSurface("concierge");
-      setInput("");
-      scrollViewport.current?.scrollTo({ top: 0 });
-      composer.current?.focus();
-    }
-  }
   return (
     <div className="app-shell">
       <a href="#main" className="skip-link">
         Skip to content
       </a>
+      <aside className="desktop-sidebar" aria-label="Toronto One sidebar">
+        <div className="sidebar-brand">
+          <BrandLogo />
+          <span>Toronto One</span>
+        </div>
+        <nav className="sidebar-navigation" aria-label="Sidebar navigation">
+          {navigation.map(({ id, label, icon: Icon }) => (
+            <Button
+              key={id}
+              variant="ghost"
+              className={cn("sidebar-link", surface === id && "is-active")}
+              aria-current={surface === id ? "page" : undefined}
+              onClick={() => navigate(id)}
+            >
+              <Icon size={20} aria-hidden="true" />
+              <span>{label}</span>
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            className={cn(
+              "sidebar-link sidebar-settings",
+              surface === "you" && "is-active",
+            )}
+            aria-current={surface === "you" ? "page" : undefined}
+            onClick={() => navigate("you")}
+          >
+            <Settings2 size={20} aria-hidden="true" />
+            <span>Settings</span>
+          </Button>
+        </nav>
+      </aside>
       <div className="app-main">
         <header className="app-header">
-          <Button
-            className="header-action"
-            variant="ghost"
-            size="icon"
-            aria-label="Start new conversation"
-            disabled={processing || !hasConversation}
-            onClick={() => void newConversation()}
-          >
-            <Plus size={22} aria-hidden="true" />
-          </Button>
+          <div className="header-brand">
+            <BrandLogo />
+          </div>
           <div className="companion-header">
             <AgentMascot state={agent.mascot} size="companion" />
             <span>Toronto One</span>
@@ -241,7 +255,9 @@ export function TorontoOneView({
                       aria-labelledby="welcome-heading"
                     >
                       <h1 id="welcome-heading">Hey, neighbour.</h1>
-                      <p className="welcome-description">What can I help you with?</p>
+                      <p className="welcome-description">
+                        City services, one message away.
+                      </p>
                       <div className="suggestions">
                         <div>
                           {suggestions.map(({ title, request, icon: Icon }) => (
@@ -291,12 +307,19 @@ export function TorontoOneView({
                             {message.role === "assistant" && (
                               <AgentActivity
                                 message={message}
-                                active={
-                                  chatProcessing && message.id === activeAssistant?.id
-                                }
+                                active={chatProcessing && message === activeAssistant}
                               />
                             )}
                             {message.parts.map((part, index) => {
+                              if (
+                                part.type === "text" &&
+                                message.parts.some(
+                                  (item) =>
+                                    item.type === "tool-requestStreetAddress" &&
+                                    item.state === "output-available",
+                                )
+                              )
+                                return null;
                               if (part.type === "text")
                                 return (
                                   <MessageBubble
@@ -335,9 +358,46 @@ export function TorontoOneView({
                                   />
                                 );
                               if (
+                                part.type === "tool-requestStreetAddress" &&
+                                part.state === "output-available"
+                              ) {
+                                const current =
+                                  message === activeAssistant &&
+                                  agent.messages.at(-1) === message;
+                                if (!current)
+                                  return (
+                                    <MessageBubble
+                                      key={part.toolCallId}
+                                      text={part.output.question}
+                                      resident={false}
+                                    />
+                                  );
+                                return (
+                                  <ResidentInput
+                                    key={part.toolCallId}
+                                    address
+                                    question={part.output.question}
+                                    disabled={!current || processing}
+                                    onSubmit={send}
+                                  />
+                                );
+                              }
+                              if (
                                 part.type === "tool-requestResidentInput" &&
                                 part.state === "output-available"
                               ) {
+                                if (part.output.choices?.length)
+                                  return (
+                                    <ResidentInput
+                                      key={part.toolCallId}
+                                      question={part.output.question}
+                                      choices={part.output.choices}
+                                      disabled={
+                                        processing || agent.messages.at(-1) !== message
+                                      }
+                                      onSubmit={send}
+                                    />
+                                  );
                                 if (
                                   message.parts
                                     .slice(index + 1)
@@ -370,7 +430,10 @@ export function TorontoOneView({
                     </section>
                   )}
                   {agent.booking.state &&
-                    !["disconnected", "ready"].includes(agent.booking.state.status) && (
+                    (agent.booking.busy ||
+                      !["disconnected", "ready"].includes(
+                        agent.booking.state.status,
+                      )) && (
                       <div className="conversation-booking">
                         <RecreationBookingPanel booking={agent.booking} />
                         <Button
@@ -397,31 +460,15 @@ export function TorontoOneView({
                 </>
               ) : surface === "tasks" ? (
                 <section className="surface-page" aria-labelledby="tasks-heading">
-                  <div className="surface-title">
-                    <div>
-                      <h1 id="tasks-heading">Tasks</h1>
-                    </div>
+                  <div className="surface-title tasks-title">
+                    <h1 id="tasks-heading">Tasks</h1>
                     <Badge variant="secondary">
                       {agent.results.length + (agent.booking.state?.activity ? 1 : 0)}
                     </Badge>
                   </div>
-                  {agent.booking.state?.status !== "disconnected" && (
+                  {agent.booking.state?.activity && (
                     <RecreationBookingPanel booking={agent.booking} />
                   )}
-                  <details className="surface-source-note">
-                    <summary>
-                      <ShieldCheck size={15} aria-hidden="true" />
-                      About these results
-                    </summary>
-                    <div className="surface-notice">
-                      <ShieldCheck size={18} aria-hidden="true" />
-                      <p>
-                        Source cards show what official pages said at the check time.
-                        Booking confirmation requires an official receipt matched in
-                        your City account. Voter registration is not checked.
-                      </p>
-                    </div>
-                  </details>
                   {agent.results.length ? (
                     <div className="space-y-5">
                       {agent.results.map((result) => (
@@ -447,15 +494,13 @@ export function TorontoOneView({
                       </Button>
                     </div>
                   ) : null}
-                  {agent.booking.state?.status === "disconnected" && (
-                    <RecreationBookingPanel booking={agent.booking} />
-                  )}
                 </section>
               ) : (
                 <section className="surface-page" aria-labelledby="you-heading">
                   <div className="surface-title">
                     <h1 id="you-heading">Settings</h1>
                   </div>
+                  <RecreationBookingPanel booking={agent.booking} accountOnly />
                   <Card className="preferences-card">
                     <CardContent>
                       <h2>Appearance</h2>
@@ -514,10 +559,6 @@ export function TorontoOneView({
                       </Button>
                     </CardContent>
                   </Card>
-                  <p className="privacy-footnote">
-                    Independent from the City of Toronto. AI can make mistakes. Raccoon
-                    animations rendered from our 3D character.
-                  </p>
                 </section>
               )}
             </div>

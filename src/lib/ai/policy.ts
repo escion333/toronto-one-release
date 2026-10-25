@@ -96,6 +96,39 @@ export function allowedActions(url: string, control: BrowserControl): BrowserAct
   return [];
 }
 export const normalizeEvidence = (value: string) => value.replace(/\s+/g, " ").trim();
+
+/** Only equivalent spelling/abbreviation changes; partial addresses never authorize a choice. */
+export function addressSuggestionAllowed(
+  requested: string | undefined,
+  selected: string,
+  suggestions: string[],
+) {
+  if (suggestions.length === 1) return true;
+  if (!requested) return false;
+  const normalize = (value: string) =>
+    value
+      .toUpperCase()
+      .replace(/[.,]/g, " ")
+      .replace(
+        /\b(?:STREET|AVENUE|ROAD|BOULEVARD|DRIVE|WEST|EAST|NORTH|SOUTH)\b/g,
+        (part) =>
+          ({
+            STREET: "ST",
+            AVENUE: "AVE",
+            ROAD: "RD",
+            BOULEVARD: "BLVD",
+            DRIVE: "DR",
+            WEST: "W",
+            EAST: "E",
+            NORTH: "N",
+            SOUTH: "S",
+          })[part] ?? part,
+      )
+      .replace(/\s+/g, " ")
+      .trim();
+  const exact = suggestions.filter((name) => normalize(name) === normalize(requested));
+  return exact.length === 1 && normalize(selected) === normalize(requested);
+}
 export function verifyQuotes(text: string, quotes: string[]): void {
   const normalized = normalizeEvidence(text);
   if (

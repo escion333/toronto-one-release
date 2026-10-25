@@ -1,9 +1,14 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import { once } from "node:events";
 
 export type ResidentDesktop = {
   display: string;
+  uid: number;
+  home: string;
   port: number;
   expiresAt: number;
   interactive: boolean;
@@ -11,11 +16,45 @@ export type ResidentDesktop = {
 };
 const shared = globalThis as typeof globalThis & {
   torontoOneDesktops?: Map<string, ResidentDesktop>;
+  torontoOneNextGuestUid?: number;
 };
 export const residentDesktops = (shared.torontoOneDesktops ??= new Map<
   string,
   ResidentDesktop
 >());
+
+export function authorizeResidentDesktop(
+  cookie: string | undefined,
+  origin: string | undefined,
+  expectedOrigin: string,
+  registry = residentDesktops,
+  now = Date.now(),
+) {
+  if (origin !== expectedOrigin) return undefined;
+  const owner = cookie
+    ?.split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("toronto-one-agent="))
+    ?.slice("toronto-one-agent=".length);
+  const desktop = owner ? registry.get(owner) : undefined;
+  return owner && desktop?.interactive && desktop.expiresAt > now
+    ? { owner, desktop }
+    : undefined;
+}
+
+export function residentBrowserEnvironment(
+  desktop: ResidentDesktop,
+  executablePath: string,
+) {
+  return {
+    PATH: "/usr/local/bin:/usr/bin:/bin",
+    HOME: desktop.home,
+    LANG: "en_US.UTF-8",
+    DISPLAY: desktop.display,
+    TORONTO_BROWSER_UID: String(desktop.uid),
+    TORONTO_CHROMIUM_PATH: executablePath,
+  };
+}
 
 export function remoteCityEnabled() {
   return process.env.REMOTE_CITY_BROWSER === "true" && process.platform === "linux";
@@ -26,6 +65,8 @@ export async function createResidentDesktop(owner: string) {
   if (!remoteCityEnabled())
     throw new Error("Inline City browsing is unavailable on this server.");
   await closeResidentDesktop(owner);
+  if (residentDesktops.size >= 2)
+    throw new Error("Both private City browsers are in use. Please try again shortly.");
   const xvfb = spawn(
     "Xvfb",
     ["-displayfd", "3", "-screen", "0", "430x900x24", "-nolisten", "tcp"],
@@ -82,7 +123,12 @@ export async function createResidentDesktop(owner: string) {
   vnc.once("error", () => {
     xvfb.kill();
   });
+  const uid = (shared.torontoOneNextGuestUid =
+    (shared.torontoOneNextGuestUid ?? 40000) + 1);
+  const home = await mkdtemp(path.join(tmpdir(), "toronto-one-guest-"));
   const desktop: ResidentDesktop = {
+    uid,
+    home,
     display,
     port,
     expiresAt: Date.now() + 20 * 60_000,
@@ -97,4 +143,5 @@ export async function closeResidentDesktop(owner: string) {
   const desktop = residentDesktops.get(owner);
   residentDesktops.delete(owner);
   for (const process of desktop?.children ?? []) process.kill();
+  if (desktop) await rm(desktop.home, { recursive: true, force: true });
 }

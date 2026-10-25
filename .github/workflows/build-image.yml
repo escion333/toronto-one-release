@@ -1,0 +1,38 @@
+name: Build Toronto One image
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/ui-remote-release]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toronto-one-remote-image
+  cancel-in-progress: false
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      IMAGE: registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build on GitHub's Linux runner
+        run: docker build --platform linux/amd64 --provenance=false --tag "$IMAGE" .
+      - name: Push private image to Cloudflare
+        env:
+          REGISTRY_USER: ${{ secrets.CF_UI_REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.CF_UI_REGISTRY_PASSWORD }}
+        run: |
+          printf '%s' "$REGISTRY_PASSWORD" | docker login registry.cloudflare.com --username "$REGISTRY_USER" --password-stdin
+          docker push "$IMAGE"
+          docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}' | tee image-reference.txt
+          cat image-reference.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Clear registry login
+        if: always()
+        run: docker logout registry.cloudflare.com

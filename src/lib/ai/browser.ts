@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { ExecutionTimings } from "./timing.ts";
 import {
   allowedActions,
+  addressSuggestionAllowed,
   approvedPageUrl,
   normalizeCityLink,
   type BrowserAction,
@@ -48,6 +49,7 @@ export class CityBrowser {
   private context: BrowserContext | undefined;
   private page: Page | undefined;
   private current: Observation | undefined;
+  private requestedAddress: string | undefined;
   private queue: Promise<unknown> = Promise.resolve();
   readonly observations = new Map<string, Observation>();
   async run<T>(operation: () => Promise<T>): Promise<T> {
@@ -268,7 +270,11 @@ export class CityBrowser {
       );
     if (
       control.role === "option" &&
-      this.current.controls.filter((c) => c.role === "option").length !== 1
+      !addressSuggestionAllowed(
+        this.requestedAddress,
+        control.name,
+        this.current.controls.filter((c) => c.role === "option").map((c) => c.name),
+      )
     )
       throw new Error(
         "Several addresses match. Ask the resident for a more precise address; do not choose for them.",
@@ -282,6 +288,7 @@ export class CityBrowser {
         throw new Error(
           "Enter a short address or search phrase, never a password or identity document.",
         );
+      if (control.field === "Address") this.requestedAddress = value;
       await this.timing.measure("form_entry", () => element.fill(value));
     } else if (action === "select") {
       if (!value) throw new Error("Select a value.");
@@ -301,6 +308,7 @@ export class CityBrowser {
     this.context = undefined;
     this.page = undefined;
     this.current = undefined;
+    this.requestedAddress = undefined;
     this.observations.clear();
   }
 }

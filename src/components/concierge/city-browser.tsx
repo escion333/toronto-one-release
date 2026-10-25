@@ -11,6 +11,7 @@ export function CityBrowser() {
   const screen = useRef<HTMLDivElement>(null);
   const keyboard = useRef<HTMLInputElement>(null);
   const connection = useRef<RFB | null>(null);
+  const [available, setAvailable] = useState(false);
   const [status, setStatus] = useState("Connecting your private City browser…");
   useEffect(() => {
     let disposed = false;
@@ -27,6 +28,7 @@ export function CityBrowser() {
         throw new Error(
           "Inline browsing is unavailable. On a local Mac, use the City browser window.",
         );
+      if (!disposed) setAvailable(true);
       const { default: RemoteFramebuffer } = await import("@novnc/novnc");
       if (disposed || !screen.current) return;
       const url = new URL(appPath("/api/city-browser/socket"), window.location.origin);
@@ -67,8 +69,8 @@ export function CityBrowser() {
       <p className="card-footnote" role="status">
         {status}
       </p>
-      <div ref={screen} className="city-browser-screen" />
-      <div className="city-browser-controls">
+      <div ref={screen} className="city-browser-screen" hidden={!available} />
+      <div className="city-browser-controls" hidden={!available}>
         <Button variant="outline" size="sm" onClick={() => keyboard.current?.focus()}>
           <Keyboard size={16} aria-hidden="true" /> Keyboard
         </Button>

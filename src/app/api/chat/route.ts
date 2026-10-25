@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     );
   let releaseUsage: () => void;
   try {
-    releaseUsage = reserveRun(session.id);
+    releaseUsage = await reserveRun(session.id);
   } catch (error) {
     return new Response(
       error instanceof Error ? error.message : "Please try again later.",
@@ -99,7 +99,8 @@ export async function POST(request: Request) {
         "Cache-Control": "no-store",
         "Set-Cookie": sessionCookie(
           session,
-          new URL(request.url).protocol === "https:",
+          process.env.PUBLIC_ORIGIN?.startsWith("https:") ||
+            new URL(request.url).protocol === "https:",
         ),
       },
       onError: publicAIError,
@@ -115,6 +116,7 @@ export async function POST(request: Request) {
           "browserObserve",
           "browserAct",
           "requestResidentInput",
+          "requestStreetAddress",
           "publishResult",
         ]);
         const start = completed.findLastIndex(

@@ -1,0 +1,27 @@
+{
+  "name": "toronto-one",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-25",
+  "workers_dev": false,
+  "observability": { "enabled": false },
+  "routes": [
+    { "pattern": "tomsanee.com/toronto-one*", "zone_name": "tomsanee.com" },
+    { "pattern": "www.tomsanee.com/toronto-one*", "zone_name": "tomsanee.com" },
+  ],
+  "vars": {
+    "AI_GATEWAY_MODEL": "openai/gpt-6.1-sol",
+    "DEMO_DAILY_TURNS": "50",
+    "KEEP_AWAKE_UNTIL": "2026-11-01T09:40:00.000Z",
+  },
+  "containers": [
+    {
+      "class_name": "TorontoOne",
+      "scheduling_policy": "durable_object",
+      "images": {
+        "base": { "dockerfile": "../../Dockerfile", "build_context": "../.." },
+      },
+    },
+  ],
+  "durable_objects": { "bindings": [{ "name": "APP", "class_name": "TorontoOne" }] },
+  "exports": { "TorontoOne": { "type": "durable-object", "storage": "sqlite" } },
+}

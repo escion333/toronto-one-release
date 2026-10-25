@@ -46,6 +46,7 @@ export const bookingStateSchema = z.object({
       id: z.string().uuid(),
       digest: z.string(),
       expiresAt: z.number(),
+      expired: z.boolean().optional(),
       participant: z.string(),
       totalCents: z.literal(0),
       currency: z.literal("CAD"),

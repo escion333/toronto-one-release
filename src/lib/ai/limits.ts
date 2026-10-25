@@ -1,3 +1,4 @@
+import { durableStore } from "./durable-store.ts";
 import { mkdirSync, readFileSync, writeFileSync, renameSync } from "node:fs";
 import path from "node:path";
 
@@ -10,7 +11,7 @@ const directory =
 const ledgerPath = path.join(directory, "usage.json");
 
 /** Reserve before a model call; failed calls still consume a turn. Single replica only. */
-export function reserveRun(owner: string, now = Date.now()): () => void {
+export async function reserveRun(owner: string, now = Date.now()): Promise<() => void> {
   if (active >= maxConcurrent)
     throw new Error(
       "The raccoon is helping a few neighbours. Please try again shortly.",
@@ -18,6 +19,23 @@ export function reserveRun(owner: string, now = Date.now()): () => void {
   if ((sessionTurns.get(owner) ?? 0) >= Number(process.env.DEMO_SESSION_TURNS ?? 12))
     throw new Error("This visit has reached its AI limit. Please come back later.");
   const day = new Date(now).toISOString().slice(0, 10);
+  if (process.env.PRIVATE_STORE_URL) {
+    active++;
+    try {
+      await durableStore("reserve", `usage-${day}`);
+    } catch (error) {
+      active--;
+      throw error;
+    }
+    sessionTurns.set(owner, (sessionTurns.get(owner) ?? 0) + 1);
+    let released = false;
+    return () => {
+      if (!released) {
+        released = true;
+        active--;
+      }
+    };
+  }
   let count = 0;
   try {
     const stored: unknown = JSON.parse(readFileSync(ledgerPath, "utf8"));

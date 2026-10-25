@@ -1,3 +1,4 @@
+import { durableStore } from "./durable-store.ts";
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename } from "node:fs/promises";
 import path from "node:path";
@@ -72,6 +73,8 @@ export async function priorAttempt(
   payload: CheckoutPayload,
   directory = privateBookingDirectory,
 ) {
+  if (process.env.PRIVATE_STORE_URL && directory === privateBookingDirectory)
+    return durableStore("exists", attemptKey(payload));
   try {
     await readFile(
       /* turbopackIgnore: true */ path.join(directory, `${attemptKey(payload)}.json`),
@@ -87,6 +90,10 @@ export async function recordOutboundAttempt(
   plan: CheckoutApproval,
   directory = privateBookingDirectory,
 ) {
+  if (process.env.PRIVATE_STORE_URL && directory === privateBookingDirectory) {
+    await durableStore("claim", attemptKey(plan.payload));
+    return;
+  }
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const file = await open(
     path.join(directory, `${attemptKey(plan.payload)}.json`),
@@ -121,6 +128,10 @@ export async function recordConfirmedAttempt(
   receiptNumber: string,
   directory = privateBookingDirectory,
 ) {
+  if (process.env.PRIVATE_STORE_URL && directory === privateBookingDirectory) {
+    await durableStore("confirm", attemptKey(plan.payload));
+    return;
+  }
   const destination = path.join(directory, `${attemptKey(plan.payload)}.json`);
   const previous = z
     .object({ sentAt: z.string().optional() })

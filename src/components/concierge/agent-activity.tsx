@@ -32,7 +32,9 @@ export function AgentActivity({
     .filter(isToolUIPart)
     .filter(
       (part) =>
-        part.type !== "tool-requestResidentInput" && part.type !== "tool-publishResult",
+        part.type !== "tool-requestResidentInput" &&
+        part.type !== "tool-requestStreetAddress" &&
+        part.type !== "tool-publishResult",
     );
   if (!parts.length) return null;
   const pending =

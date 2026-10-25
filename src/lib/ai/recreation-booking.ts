@@ -4,6 +4,7 @@ import {
   closeResidentDesktop,
   remoteCityEnabled,
   residentDesktops,
+  residentBrowserEnvironment,
 } from "./remote-desktop.ts";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { ExecutionTimings } from "./timing.ts";
@@ -91,6 +92,14 @@ export class RecreationBooking {
     this.residentView();
     return {
       ...this.state,
+      ...(this.state.review
+        ? {
+            review: {
+              ...this.state.review,
+              expired: Date.now() >= this.state.review.expiresAt,
+            },
+          }
+        : {}),
       timings: [...this.timing.spans],
       operations: this.operations ?? [],
       canReconcile: Boolean(
@@ -135,47 +144,68 @@ export class RecreationBooking {
     const desktop = remoteCityEnabled()
       ? await createResidentDesktop(this.owner)
       : undefined;
-    await this.timing.measure("browser_startup", async () => {
-      this.browser = await chromium.launch({
-        headless: false,
-        args: [
-          "--disable-http2",
-          "--window-size=430,900",
-          "--window-position=0,0",
-          "--force-device-scale-factor=1",
-        ],
-        ...(desktop ? { env: { ...process.env, DISPLAY: desktop.display } } : {}),
+    try {
+      await this.timing.measure("browser_startup", async () => {
+        this.browser = await chromium.launch({
+          headless: false,
+          args: [
+            "--disable-http2",
+            "--window-size=430,900",
+            "--window-position=0,0",
+            "--force-device-scale-factor=1",
+          ],
+          ...(desktop
+            ? {
+                executablePath: path.join(
+                  process.cwd(),
+                  "scripts",
+                  "private-chromium.sh",
+                ),
+                env: residentBrowserEnvironment(desktop, chromium.executablePath()),
+              }
+            : {}),
+        });
+        this.context = await this.browser.newContext({
+          acceptDownloads: true,
+          viewport: { width: 430, height: 790 },
+        });
+        // An in-memory incognito context. No persistent profile, password capture,
+        // storageState, tracing, console forwarding or model browser tools.
+        await this.installNavigationPolicy(this.context);
+        this.page = await this.context.newPage();
+        this.page.setDefaultTimeout(12_000);
+        this.page.setDefaultNavigationTimeout(25_000);
       });
-      this.context = await this.browser.newContext({
-        acceptDownloads: true,
-        viewport: { width: 430, height: 790 },
-      });
-      // An in-memory incognito context. No persistent profile, password capture,
-      // storageState, tracing, console forwarding or model browser tools.
-      await this.installNavigationPolicy(this.context);
-      this.page = await this.context.newPage();
-      this.page.setDefaultTimeout(12_000);
-      this.page.setDefaultNavigationTimeout(25_000);
-    });
-    const page = this.requirePage();
-    await this.timing.measure("navigation", () =>
-      page.goto(`${origin}/toronto/signin?onlineSiteId=0`, {
-        waitUntil: "domcontentloaded",
-      }),
-    );
-    await this.timing.measure("page_loading", () =>
-      page.getByRole("textbox", { name: /Email address/ }).waitFor(),
-    );
-    this.state = confirmed ?? {
-      status: "sign_in_required",
-      message:
-        "Sign in in the secure City browser below, then choose I’m signed in. Toronto One does not read your password or MFA codes.",
-      timings: [],
-    };
-    if (confirmed)
-      this.state.message =
-        "City sign-in window opened. Your previously verified reservation and receipt remain available here.";
-    return this.snapshot();
+      const page = this.requirePage();
+      await this.timing.measure("navigation", () =>
+        page.goto(`${origin}/toronto/signin?onlineSiteId=0`, {
+          waitUntil: "domcontentloaded",
+        }),
+      );
+      await this.timing.measure("page_loading", () =>
+        page.getByRole("textbox", { name: /Email address/ }).waitFor(),
+      );
+      await page
+        .getByRole("textbox", { name: /Email address/ })
+        .scrollIntoViewIfNeeded();
+      this.state = confirmed ?? {
+        status: "sign_in_required",
+        message:
+          "Sign in in the secure City browser below, then choose I’m signed in. Toronto One does not read your password or MFA codes.",
+        timings: [],
+      };
+      if (confirmed)
+        this.state.message =
+          "City sign-in window opened. Your previously verified reservation and receipt remain available here.";
+      return this.snapshot();
+    } catch (error) {
+      await this.browser?.close().catch(() => undefined);
+      await closeResidentDesktop(this.owner);
+      this.browser = undefined;
+      this.context = undefined;
+      this.page = undefined;
+      throw error;
+    }
   }
   private async installNavigationPolicy(context: BrowserContext) {
     await context.route("**/*", async (route) => {
@@ -788,9 +818,9 @@ export class RecreationBooking {
   async close() {
     this.residentPaused = false;
     this.pendingActivityUrl = undefined;
-    await closeResidentDesktop(this.owner);
     await this.context?.close().catch(() => undefined);
     await this.browser?.close().catch(() => undefined);
+    await closeResidentDesktop(this.owner);
     this.page = undefined;
     this.context = undefined;
     this.browser = undefined;

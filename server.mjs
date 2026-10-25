@@ -2,7 +2,10 @@ import { createServer } from "node:http";
 import { connect } from "node:net";
 import next from "next";
 import { WebSocketServer } from "ws";
-import { residentDesktops } from "./src/lib/ai/remote-desktop.ts";
+import {
+  residentDesktops,
+  authorizeResidentDesktop,
+} from "./src/lib/ai/remote-desktop.ts";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = Number(process.env.PORT ?? 3000);
@@ -12,6 +15,11 @@ await app.prepare();
 const handler = app.getRequestHandler();
 const server = createServer((request, response) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
+  response.setHeader("X-Frame-Options", "DENY");
+  response.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+  );
   response.setHeader("Referrer-Policy", "same-origin");
   handler(request, response);
 });
@@ -28,21 +36,17 @@ server.on("upgrade", (request, socket, head) => {
   }
   const origin = request.headers.origin;
   const allowedOrigin = process.env.PUBLIC_ORIGIN ?? `http://${request.headers.host}`;
-  const owner = request.headers.cookie
-    ?.split(";")
-    .map((x) => x.trim())
-    .find((x) => x.startsWith("toronto-one-agent="))
-    ?.slice("toronto-one-agent=".length);
-  const desktop = owner ? residentDesktops.get(owner) : undefined;
-  if (
-    origin !== allowedOrigin ||
-    !desktop?.interactive ||
-    desktop.expiresAt <= Date.now()
-  ) {
+  const authorized = authorizeResidentDesktop(
+    request.headers.cookie,
+    origin,
+    allowedOrigin,
+  );
+  if (!authorized) {
     socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
     socket.destroy();
     return;
   }
+  const { owner, desktop } = authorized;
   sockets.handleUpgrade(request, socket, head, (websocket) => {
     const upstream = connect(desktop.port, "127.0.0.1");
     const close = () => {

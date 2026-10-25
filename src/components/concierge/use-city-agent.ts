@@ -103,8 +103,9 @@ export function useCityAgent() {
     focused,
     toolRunning: toolParts.some((p) => p.state === "input-available"),
     needsInput:
-      lastTool?.type === "tool-requestResidentInput" &&
-      lastTool.state === "output-available",
+      ["tool-requestResidentInput", "tool-requestStreetAddress"].includes(
+        lastTool?.type ?? "",
+      ) && lastTool?.state === "output-available",
     hasResult: toolParts.some(
       (p) => p.type === "tool-publishResult" && p.state === "output-available",
     ),

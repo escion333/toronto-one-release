@@ -48,10 +48,11 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "3.9.10",
     "tailwindcss": "^4",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "wrangler": "4.152.0"
   },
   "packageManager": "pnpm@10.34.8",
-  "description": "Toronto One \u2014 a local demonstration of a Toronto municipal concierge.",
+  "description": "Toronto One — a local demonstration of a Toronto municipal concierge.",
   "engines": {
     "node": ">=24 <27",
     "pnpm": ">=10.34.8 <11"

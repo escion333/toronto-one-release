@@ -4,7 +4,6 @@ import { ChevronRight, ExternalLink } from "lucide-react";
 import type { CityResult } from "@/lib/ai/contracts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BottomSheet } from "./bottom-sheet";
 
 export function CityResultCard({
   result,
@@ -27,7 +26,7 @@ export function CityResultCard({
   const summaryFacts = result.facts.filter(
     (fact, index) =>
       index < 3 ||
-      /fee|cost|price|availab|eligib|age|accessib|date|time|when|place|location|address|where/i.test(
+      /fee|cost|price|availab|eligib|age|accessib|date|time|hours?|entrance|when|place|location|address|where/i.test(
         fact.label,
       ) ||
       /\$|\bfees?\b|\bcharges?\b/i.test(fact.quote),
@@ -65,51 +64,47 @@ export function CityResultCard({
           Sources · Checked {checkedAt}
           <ChevronRight size={15} aria-hidden="true" />
         </Button>
-        <BottomSheet
-          open={sourceOpen}
-          onOpenChange={setSourceOpen}
-          className="source-sheet"
-          title="Sources"
-          description={`Checked ${checkedAt} · Toronto time`}
-        >
-          <a
-            className="official-link"
-            href={result.sourceUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            {voting ? "Toronto MyVote" : "City activity page"}
-            <ExternalLink size={15} aria-hidden="true" />
-          </a>
-          <dl className="result-facts source-facts">
-            {result.facts.map((fact, index) => (
-              <div key={index}>
-                <dt>{fact.label}</dt>
-                <dd className="source-quote">{fact.quote}</dd>
-                {fact.sourceUrl && fact.sourceUrl !== result.sourceUrl && (
-                  <dd>
-                    <a
-                      className="official-link"
-                      href={fact.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      City activity listing
-                      <ExternalLink size={14} aria-hidden="true" />
-                    </a>
-                  </dd>
-                )}
-              </div>
-            ))}
-          </dl>
-          <p className="sheet-note">
-            Exact official-page excerpts.{" "}
-            {voting
-              ? "Eligibility and voter registration were not checked."
-              : "Availability can change; this result does not hold a spot."}
-          </p>
-          <p className="sheet-note">Toronto One is independent from the City.</p>
-        </BottomSheet>
+        {sourceOpen && (
+          <section className="inline-sources" aria-label="Official sources">
+            <a
+              className="official-link"
+              href={result.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {voting ? "Toronto MyVote" : "City activity page"}
+              <ExternalLink size={15} aria-hidden="true" />
+            </a>
+            <dl className="result-facts source-facts">
+              {result.facts.map((fact, index) => (
+                <div key={index}>
+                  <dt>{fact.label}</dt>
+                  <dd className="source-quote">{fact.quote}</dd>
+                  {fact.sourceUrl && fact.sourceUrl !== result.sourceUrl && (
+                    <dd>
+                      <a
+                        className="official-link"
+                        href={fact.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        City activity listing
+                        <ExternalLink size={14} aria-hidden="true" />
+                      </a>
+                    </dd>
+                  )}
+                </div>
+              ))}
+            </dl>
+            <p className="sheet-note">
+              Exact official-page excerpts.{" "}
+              {voting
+                ? "Eligibility and voter registration were not checked."
+                : "Availability can change; this result does not hold a spot."}
+            </p>
+            <p className="sheet-note">Toronto One is independent from the City.</p>
+          </section>
+        )}
       </CardContent>
     </Card>
   );

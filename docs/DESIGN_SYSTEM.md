@@ -1,6 +1,6 @@
 # Design system
 
-Toronto One uses Next.js, shadcn/Radix and Lucide. A centered raccoon companion, readable conversation and contextual actions form the main experience. Conversation, Tasks and You share the same navigation and semantic styling.
+Toronto One uses Next.js, shadcn/Radix and Lucide. A centered raccoon companion, readable conversation and contextual actions form the main experience. Chat, Tasks and Settings share the same navigation and semantic styling.
 
 ## Tokens and typography
 
@@ -34,5 +34,7 @@ Domain-neutral primitives belong in `src/components/ui`; concierge-specific comp
 ## Responsive and accessible behavior
 
 The application uses one main content scroller. Safe-area insets and visual-viewport handling keep the composer visible when a mobile keyboard changes height. Navigation hides while typing, tabs retain reading position and review sheets preserve conversation context. Pinch zoom remains enabled.
+
+At widths of 960px and above, a persistent 248px sidebar contains the brand, Chat and Tasks, with Settings anchored at the bottom. The conversation and composer remain centered in the main area. Below that breakpoint, the header settings control and bottom Chat/Tasks navigation remain in place.
 
 Preserve visible focus, meaningful labels, keyboard access, readable decision details and touch targets. Pending or uncertain states must remain visually distinct from confirmed results. Accessibility conformance requires testing of complete flows; primitives and token choices alone do not establish it.

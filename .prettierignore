@@ -9,3 +9,5 @@ AGENTS.md
 assets
 tools
 .local
+
+**/.wrangler/**

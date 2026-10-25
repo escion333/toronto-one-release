@@ -1,6 +1,6 @@
 # Architecture
 
-Toronto One is a local Next.js App Router application with one AI model and two City of Toronto service workflows. The model reasons and selects tools; application code controls validation, permissions and confirmation.
+Toronto One is a Next.js App Router application with one AI model and two City of Toronto service workflows. The model reasons and selects tools; application code controls validation, permissions and confirmation.
 
 ## Request flow
 
@@ -36,7 +36,7 @@ Confirmation requires an official numbered receipt and matching enrollment evide
 
 ## Sessions and retention
 
-Anonymous ownership uses an HTTP-only, same-site cookie. Canonical public conversation and findings live in process memory, with a 20-minute inactivity limit and a small session cap. This is local continuity, not durable task infrastructure.
+Anonymous ownership uses an HTTP-only, same-site cookie. Canonical public conversation and findings live in process memory, with a 20-minute inactivity limit and a small session cap. The hosted container provides the same temporary continuity; it does not provide durable task infrastructure.
 
 A minimal, owner-bound confirmed-booking checkpoint may restore the verified Task for 20 minutes. It excludes selection lists, executable approvals and City credentials. The checkpoint does not authorize a new write or restore an authenticated browser.
 
@@ -44,6 +44,8 @@ Private receipts, account evidence and write-safety journals remain under ignore
 
 ## Operational limits
 
-The validated usage expects a local desktop browser for City authentication and a single server process. Optional custom-server, URL-prefix and remote-browser plumbing is included. The custom server has a WebSocket forwarding path for noVNC; remote City browsing is disabled by default, is not connected to the interface and has not been validated at runtime. This path is not deployment-ready. There is no production identity system, durable queue, database, notification service or unattended booking agent.
+The hosted configuration routes `/toronto-one` through one Cloudflare Durable Object to a single container. Its authenticated same-origin WebSocket forwards a private City desktop to the resident inline. Each private Chromium process has a separate unprivileged Linux UID, profile, display and restricted environment. Server files and AI credentials are inaccessible to that browser. Control pauses while the booking adapter operates.
+
+A durable, secret-protected ledger stores hashed submission-attempt markers and daily turn counts. It contains no credentials, names or receipt contents. Conversation, authenticated browser and receipt evidence remain temporary within the container; a restart clears them. There is no notification service or unattended booking agent. See [Hosting](HOSTING.md).
 
 Browser timing spans record phase, duration and outcome without page content or credentials. Provider timing includes model, Gateway and network time; it does not isolate model compute.

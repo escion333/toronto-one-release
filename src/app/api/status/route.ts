@@ -6,7 +6,7 @@ export async function GET() {
     {
       configured: gatewayConfigured(),
       model: configuredModel(),
-      booking: "local_authenticated_zero_dollar_checkout",
+      booking: "resident_authenticated_zero_dollar_checkout",
       storage: "ephemeral_session",
     },
     { headers: { "Cache-Control": "no-store" } },

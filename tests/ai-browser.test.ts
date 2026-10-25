@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import {
   allowedActions,
+  addressSuggestionAllowed,
   approvedPageUrl,
   normalizeCityLink,
   sameOrigin,
@@ -379,4 +380,22 @@ test("raccoon states follow genuine stream/tool/result/input/error events", () =
   assert.equal(agentMascotState({ ...idle, hasResult: true }), "success");
   assert.equal(agentMascotState({ ...idle, status: "error" }), "error");
   assert.equal(agentMascotState({ ...idle, toolFailed: true }), "error");
+});
+
+test("multiple address suggestions require one exact requested street, preserving directions and ambiguity", () => {
+  const names = ["100 QUEEN ST E", "100 QUEEN ST W"];
+  assert.equal(
+    addressSuggestionAllowed("100 Queen Street West", names[1]!, names),
+    true,
+  );
+  assert.equal(
+    addressSuggestionAllowed("100 Queen Street West", names[0]!, names),
+    false,
+  );
+  assert.equal(addressSuggestionAllowed("100 Queen", names[1]!, names), false);
+  assert.equal(addressSuggestionAllowed(undefined, names[1]!, names), false);
+  assert.equal(
+    addressSuggestionAllowed("100 Queen St W", names[1]!, [names[1]!, names[1]!]),
+    false,
+  );
 });
