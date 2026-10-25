@@ -1,0 +1,57 @@
+{
+  "frameSize": 256,
+  "columns": 8,
+  "fps": 12,
+  "rendering": "Full native Blender fur, transparent waist-up; lower 12 pixels alpha-faded",
+  "states": {
+    "idle": {
+      "frames": 49,
+      "loop": true,
+      "holdFrameIndex": null,
+      "atlasBytes": 381822,
+      "sha256": "2fbb1bb91d5abd42a0756000ef49d8059f3d157c089a40544978a023c92f227c"
+    },
+    "listening": {
+      "frames": 37,
+      "loop": false,
+      "holdFrameIndex": 18,
+      "atlasBytes": 286834,
+      "sha256": "58f355699e7ca9b8027dc28408a5504f010d8e8bf72815c460228122a25f7a78"
+    },
+    "thinking": {
+      "frames": 49,
+      "loop": false,
+      "holdFrameIndex": 24,
+      "atlasBytes": 376594,
+      "sha256": "c869dae8159d030f697d18a60c3d94f52d02bc4bc29ea2bc71a25c01f439b900"
+    },
+    "working": {
+      "frames": 37,
+      "loop": true,
+      "holdFrameIndex": null,
+      "atlasBytes": 287644,
+      "sha256": "fca1e9bcb6724a8795f91e15de5230e31e3953d4a03305bb3c421359b3e21c97"
+    },
+    "success": {
+      "frames": 31,
+      "loop": false,
+      "holdFrameIndex": null,
+      "atlasBytes": 243518,
+      "sha256": "e08830a0d32f1324f6e274442474f77660fd4a2e75fa1e884df785a1542a2e79"
+    },
+    "needs_input": {
+      "frames": 37,
+      "loop": false,
+      "holdFrameIndex": 18,
+      "atlasBytes": 289546,
+      "sha256": "0c59b27cb444c06e8d965cf00c473e1c44109ec0b47eeae82f9ac8840a3dcc36"
+    },
+    "error": {
+      "frames": 37,
+      "loop": false,
+      "holdFrameIndex": null,
+      "atlasBytes": 283752,
+      "sha256": "f2822e6549d23f073bb0540f18fcb0165fc3c73a4376c1bac44de7362d37b090"
+    }
+  }
+}

@@ -1,0 +1,3 @@
+# Preserve upstream licence and attribution text verbatim.
+licenses/** whitespace=-blank-at-eol
+src/app/fonts/*-OFL.txt whitespace=-blank-at-eol
