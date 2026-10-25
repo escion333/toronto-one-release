@@ -73,4 +73,4 @@ No project-wide source licence is currently granted. Bundled third-party notices
 
 ## Deployment
 
-Use `pnpm run deploy` after committing and pushing intended changes. Checks and the image build run on GitHub; Docker stays off locally. See [Hosting](docs/HOSTING.md).
+Use `pnpm run deploy` after committing and pushing intended changes. `pnpm check` runs remote checks and builds without deploying. Checks and the image build run on GitHub; Docker stays off locally. See [Hosting](docs/HOSTING.md).

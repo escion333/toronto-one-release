@@ -16,13 +16,13 @@ Commit the intended changes and push them to `origin`, then run:
 pnpm run deploy
 ```
 
-This is the default deployment path. It runs formatting, lint, type checking, tests and the production image build on a GitHub-hosted Linux runner, then deploys the prebuilt image to Cloudflare. Local Docker is not used or started. `pnpm deploy:check` validates the prebuilt-image configuration without building or deploying.
+This is the default deployment path. It runs formatting, lint, type checking, tests and the production image build on a GitHub-hosted Linux runner, then deploys the prebuilt image to Cloudflare. Local Docker is not used or started. `pnpm check` runs the same remote checks and image build without deploying. `pnpm deploy:check` validates the prebuilt-image configuration without building or deploying.
 
 The command uses your existing GitHub CLI and Wrangler sign-ins. It creates registry credentials that expire after one hour, passes them through temporary repository Actions secrets, and removes those secrets after the build, including failed builds. It never uploads local environment files or sends application credentials to GitHub. If interrupted, let the existing GitHub run finish and reconcile its status and temporary secrets before retrying; the command refuses overlapping runs or leftover credentials.
 
 The build is tied to the pushed source commit. Uncommitted files are never uploaded. After deployment, the command waits for the public health endpoint to report the exact configured and running image digest, then updates the canonical Wrangler image pin. Include that pin in the next commit. A startup timeout requires checking the live image; it does not automatically redeploy.
 
-The canonical Wrangler config also references a prebuilt image, so directly invoking Wrangler cannot trigger a local Docker build. Use `pnpm run deploy` for source updates; a bare Wrangler deployment only selects the already configured image. Keep Docker Desktop off. The Dockerfile is for the remote runner.
+The canonical Wrangler config also references a prebuilt image, so directly invoking Wrangler cannot trigger a local Docker build. Use `pnpm run deploy` for source updates; a bare Wrangler deployment only selects the already configured image. Keep Docker Desktop off. The Dockerfile and `pnpm check:ci` are for the remote runner; do not run the production check/build locally.
 
 ## Preview limits
 

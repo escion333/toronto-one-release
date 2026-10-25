@@ -99,22 +99,29 @@ function gh(args: string[]) {
 }
 
 async function main() {
-  const parsed = ts.parseConfigFileTextToJson(
-    configPath,
-    await readFile(configPath, "utf8"),
-  );
+  const configText = await readFile(configPath, "utf8");
+  const parsed = ts.parseConfigFileTextToJson(configPath, configText);
   if (parsed.error) throw new Error("The deployment configuration is invalid.");
   const rawConfig: unknown = parsed.config;
   const config = deploymentConfig(rawConfig);
   const currentImage = config.containers[0]?.images.base.image;
   if (!currentImage) throw new Error("Missing prebuilt image.");
-  if (process.argv.slice(2).includes("--check")) {
+  if (configText.split(currentImage).length !== 2)
+    throw new Error(
+      "The canonical image pin must occur exactly once in the configuration.",
+    );
+  const args = process.argv.slice(2);
+  if (
+    args.length > 1 ||
+    (args.length === 1 && !["--check", "--build-only"].includes(args[0] ?? ""))
+  )
+    throw new Error("Usage: pnpm run deploy, pnpm check, or pnpm deploy:check");
+  if (args[0] === "--check") {
     console.log(
       "Deployment config uses a pinned remote image. pnpm run deploy builds on GitHub; local Docker is disabled.",
     );
     return;
   }
-  if (process.argv.length > 2) throw new Error("Usage: pnpm run deploy [--check]");
   if (command("git", ["status", "--porcelain"]).trim())
     throw new Error(
       "Commit the intended changes and push them to origin before deploying. Uncommitted files are never uploaded.",
@@ -277,6 +284,11 @@ async function main() {
       console.log("Temporary GitHub registry credentials removed.");
   }
 
+  if (args[0] === "--build-only") {
+    console.log(`Remote checks passed. Built ${image}. Nothing was deployed.`);
+    return;
+  }
+
   const nextConfig = deploymentConfig(rawConfig, image);
   const privateDir = resolve(dirname(configPath), ".wrangler");
   const privateConfig = resolve(privateDir, "remote-release.jsonc");
@@ -296,20 +308,26 @@ async function main() {
     env: { ...process.env, WRANGLER_DOCKER_BIN: "/usr/bin/false" },
   });
   for (let attempt = 0; attempt < 12; attempt++) {
+    let healthy = false;
     try {
       const response = await fetch("https://www.tomsanee.com/toronto-one/api/health", {
         signal: AbortSignal.timeout(15000),
       });
       const value: unknown = await response.json();
-      if (response.ok && healthMatches(value, image)) {
-        await writeFile(configPath, JSON.stringify(nextConfig, null, 2) + "\n");
-        console.log(
-          "Live image verified. Include the updated Wrangler image pin in your next commit.",
-        );
-        return;
-      }
+      healthy = response.ok && healthMatches(value, image);
     } catch {
       /* Allow the deployed image to start; do not redeploy it. */
+    }
+    if (healthy) {
+      if ((await readFile(configPath, "utf8")) !== configText)
+        throw new Error(
+          "Live image verified, but the deployment config changed during the run. Reconcile its image pin without overwriting those edits.",
+        );
+      await writeFile(configPath, configText.replace(currentImage, image));
+      console.log(
+        "Live image verified. Include the updated Wrangler image pin in your next commit.",
+      );
+      return;
     }
     await delay(5000);
   }

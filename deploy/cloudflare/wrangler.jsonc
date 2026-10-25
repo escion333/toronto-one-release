@@ -1,6 +1,17 @@
 {
-  "name": "toronto-one",
   "main": "worker.mjs",
+  "containers": [
+    {
+      "images": {
+        "base": {
+          "image": "registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote@sha256:3f83ca0e892518fba190f2678d7a7310747ca4c825a0dad0447cbdbbf4ede549",
+        },
+      },
+      "class_name": "TorontoOne",
+      "scheduling_policy": "durable_object",
+    },
+  ],
+  "name": "toronto-one",
   "compatibility_date": "2026-10-25",
   "workers_dev": false,
   "observability": {
@@ -21,17 +32,6 @@
     "DEMO_DAILY_TURNS": "50",
     "KEEP_AWAKE_UNTIL": "2026-11-01T09:40:00.000Z",
   },
-  "containers": [
-    {
-      "class_name": "TorontoOne",
-      "scheduling_policy": "durable_object",
-      "images": {
-        "base": {
-          "image": "registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote@sha256:485ed432210299c4946efe6736cdc8ee893f58af3eeb2f671e23fb2edbcf1973",
-        },
-      },
-    },
-  ],
   "durable_objects": {
     "bindings": [
       {
