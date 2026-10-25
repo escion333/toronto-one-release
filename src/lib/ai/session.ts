@@ -1,4 +1,5 @@
-import { maxSessions, forgetRunOwner } from "./limits.ts";
+import { forgetRunOwner } from "./limits.ts";
+import { launchPolicy } from "./launch-policy.ts";
 import { appBasePath } from "../app-path.ts";
 import { randomUUID, createHash } from "node:crypto";
 import type { UIMessage } from "ai";
@@ -89,7 +90,7 @@ export function getSession(
     return existing;
   }
   const checkpoint = id ? readBookingCheckpoint(id, now) : undefined;
-  if (checkpoint && sessions.size < maxSessions) {
+  if (checkpoint && sessions.size < launchPolicy(now).maxSessions) {
     const recovered: AgentSession = {
       id: checkpoint.owner,
       browser: new CityBrowser(),
@@ -105,7 +106,7 @@ export function getSession(
     return recovered;
   }
   if (!create) return undefined;
-  if (sessions.size >= maxSessions)
+  if (sessions.size >= launchPolicy(now).maxSessions)
     throw new Error(
       "All local browser sessions are busy. Try again after a session expires.",
     );

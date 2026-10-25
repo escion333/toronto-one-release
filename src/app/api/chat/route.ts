@@ -1,7 +1,12 @@
 import { reserveRun } from "@/lib/ai/limits";
 import { randomUUID } from "node:crypto";
 import { appBasePath } from "@/lib/app-path";
-import { createAgentUIStreamResponse } from "ai";
+import {
+  createAgentUIStream,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+} from "ai";
+import { AdmissionError } from "@/lib/ai/run-queue";
 import { z } from "zod";
 import { createCityAgent, gatewayConfigured } from "@/lib/ai/agent";
 import { publicAIError } from "@/lib/ai/errors";
@@ -62,16 +67,24 @@ export async function POST(request: Request) {
       "A request is already running. Stop it or wait before retrying.",
       { status: 409 },
     );
-  let releaseUsage: () => void;
-  try {
-    releaseUsage = await reserveRun(session.id);
-  } catch (error) {
-    return new Response(
-      error instanceof Error ? error.message : "Please try again later.",
-      { status: 429, headers: { "Retry-After": "60" } },
-    );
-  }
+  // Claim ownership synchronously, including while waiting for an execution slot.
   session.busy = true;
+  const stop = new AbortController();
+  const signal = AbortSignal.any([request.signal, stop.signal]);
+  let releaseUsage: (() => void) | undefined;
+  let released = false;
+  const release = async () => {
+    if (released) return;
+    released = true;
+    try {
+      // Each visitor keeps their own evidence and messages, never an idle Chromium page.
+      await session.browser.close();
+    } finally {
+      releaseUsage?.();
+      session.busy = false;
+      session.touchedAt = Date.now();
+    }
+  };
   const userMessage = {
     id: input.message.id,
     role: "user" as const,
@@ -82,75 +95,87 @@ export async function POST(request: Request) {
   const previous =
     previousIndex >= 0 ? session.messages.slice(0, previousIndex) : session.messages;
   const messages = [...previous.slice(-30), userMessage];
-  session.messages = messages;
-  const release = () => {
-    releaseUsage();
-    session.busy = false;
-    session.touchedAt = Date.now();
-  };
   const runStarted = performance.now();
-  try {
-    return await createAgentUIStreamResponse({
-      agent: createCityAgent(session),
-      uiMessages: messages,
-      generateMessageId: randomUUID,
-      abortSignal: request.signal,
-      timeout: { totalMs: 180_000 },
-      sendReasoning: false,
-      headers: {
-        "Cache-Control": "no-store",
-        "Set-Cookie": sessionCookie(
-          session,
-          process.env.PUBLIC_ORIGIN?.startsWith("https:") ||
-            new URL(request.url).protocol === "https:",
-        ),
-      },
-      onError: publicAIError,
-      onEnd: async ({ messages: completed, isAborted, isCancelled, outcome }) => {
-        if (isAborted || isCancelled) await session.browser.close();
-        if (!isAborted && !isCancelled && outcome.status === "completed")
-          session.messages = completed;
-        const allowedNames = new Set([
-          "recreationBookingStatus",
-          "prepareRecreationBooking",
-          "recreationSearch",
-          "lookupVotingPlace",
-          "browserOpen",
-          "browserObserve",
-          "browserAct",
-          "requestResidentInput",
-          "requestStreetAddress",
-          "publishResult",
-          "citeSource",
-        ]);
-        const start = completed.findLastIndex(
-          (message) => message.id === userMessage.id,
-        );
-        const toolNames = completed
-          .slice(start + 1)
-          .flatMap((message) =>
-            message.parts.flatMap((part) =>
-              part.type.startsWith("tool-") && allowedNames.has(part.type.slice(5))
-                ? [part.type.slice(5)]
-                : [],
-            ),
-          );
-        // Operational metadata only. Never log messages, inputs, account pages or credentials.
-        console.info(
-          JSON.stringify({
-            event: "city_agent_run",
-            status: outcome.status,
-            elapsedMs: Math.round(performance.now() - runStarted),
-            tools: toolNames,
+  const stream = createUIMessageStream({
+    onEnd: ({ isCancelled, isAborted }) => {
+      if (isCancelled || isAborted) stop.abort();
+    },
+    onError: (error) =>
+      error instanceof AdmissionError ? error.message : publicAIError(error),
+    execute: async ({ writer }) => {
+      try {
+        releaseUsage = await reserveRun(session.id, signal);
+        signal.throwIfAborted();
+        session.messages = messages;
+        writer.merge(
+          await createAgentUIStream({
+            agent: createCityAgent(session),
+            uiMessages: messages,
+            generateMessageId: randomUUID,
+            abortSignal: signal,
+            timeout: { totalMs: 180_000 },
+            sendReasoning: false,
+            onError: publicAIError,
+            onEnd: async ({ messages: completed, isAborted, isCancelled, outcome }) => {
+              if (!isAborted && !isCancelled && outcome.status === "completed")
+                session.messages = completed;
+              const allowedNames = new Set([
+                "recreationBookingStatus",
+                "prepareRecreationBooking",
+                "recreationSearch",
+                "lookupVotingPlace",
+                "browserOpen",
+                "browserObserve",
+                "browserAct",
+                "requestResidentInput",
+                "requestStreetAddress",
+                "publishResult",
+                "citeSource",
+              ]);
+              const start = completed.findLastIndex(
+                (message) => message.id === userMessage.id,
+              );
+              const toolNames = completed
+                .slice(start + 1)
+                .flatMap((message) =>
+                  message.parts.flatMap((part) =>
+                    part.type.startsWith("tool-") &&
+                    allowedNames.has(part.type.slice(5))
+                      ? [part.type.slice(5)]
+                      : [],
+                  ),
+                );
+              // Operational metadata only. Never log messages, inputs, account pages or credentials.
+              console.info(
+                JSON.stringify({
+                  event: "city_agent_run",
+                  status: outcome.status,
+                  elapsedMs: Math.round(performance.now() - runStarted),
+                  tools: toolNames,
+                }),
+              );
+              await release();
+            },
           }),
         );
-        release();
-      },
-    });
-  } catch (error) {
-    release();
-    return new Response(publicAIError(error), { status: 502 });
-  }
+      } catch (error) {
+        await release();
+        throw error;
+      }
+    },
+  });
+  return createUIMessageStreamResponse({
+    stream,
+    keepAliveMs: 15_000,
+    headers: {
+      "Cache-Control": "no-store",
+      "Set-Cookie": sessionCookie(
+        session,
+        process.env.PUBLIC_ORIGIN?.startsWith("https:") ||
+          new URL(request.url).protocol === "https:",
+      ),
+    },
+  });
 }
 export async function DELETE(request: Request) {
   if (!sameOrigin(request))

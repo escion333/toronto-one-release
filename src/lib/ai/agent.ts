@@ -2,6 +2,8 @@ import {
   ToolLoopAgent,
   isStepCount,
   tool,
+  gateway,
+  wrapLanguageModel,
   type InferUITools,
   type UIMessage,
 } from "ai";
@@ -16,6 +18,7 @@ import {
 import { citeObservation } from "./citations.ts";
 import { makeBookingPlan, type AgentSession } from "./session.ts";
 import { resolveVotingIntersection } from "./voting.ts";
+import { createSpendMiddleware } from "./spend.ts";
 
 export function configuredModel() {
   return process.env.AI_GATEWAY_MODEL?.trim() || "openai/gpt-6.1-sol";
@@ -29,7 +32,10 @@ export function createCityAgent(session: AgentSession) {
   const run = <T>(fn: () => Promise<T>) => session.browser.run(fn);
   let modelStart = 0;
   return new ToolLoopAgent({
-    model: configuredModel(),
+    model: wrapLanguageModel({
+      model: gateway(configuredModel()),
+      middleware: createSpendMiddleware(),
+    }),
     maxOutputTokens: 1800,
     maxRetries: 0,
     onLanguageModelCallStart: () => {

@@ -56,6 +56,10 @@ The final mascot is a fresh 2048px transparent render from the original Blender 
 
 ## Hosted verification
 
+### Launch availability policy
+
+The October 25 launch-availability change passed local formatting, lint, strict TypeScript and all 83 tests, including fixed-window expiry, FIFO ordering/cancellation, phase-separated turn budgets, edge bursts, per-model-call durable spend reservations, unknown outcomes and booking-journal regressions. A real local six-visitor test completed with three active and three queued requests, independent cookies and retained messages/results, and sourced voting and recreation results. No booking was prepared or submitted. Provider team/key budgets and 50/75/100 percent alerts were configured and read back; no credit purchase or auto top-up change was made. Production rollout and capacity/load evidence are recorded below after deployment.
+
 The October 25 City sign-in usability patch replaces the invisible keyboard helper with a visible masked typing/paste input and an explicit clipboard-paste button, adds a browser full-screen control, and changes new private City browsers from a 430px mobile viewport to a 1280px desktop viewport. Local strict TypeScript, focused ESLint and all 55 tests passed. Hosted paste delivery, responsive/theme review and deployment of this patch remain pending at this source revision; the earlier hosted checks below do not establish that the clipboard patch is live. No credentials or booking submission were used for these local checks.
 
 The final demo release was deployed on October 25, 2026 from source `19ab906` through [GitHub run 40194522012](https://github.com/escion333/toronto-one-release/actions/runs/40194522012). Remote formatting, ESLint, route generation, strict TypeScript, all 55 tests and the production build passed. Cloudflare Worker version `5d74cf6a-a1ce-4b1f-812c-00395400c3f1` serves the image pinned in `deploy/cloudflare/wrangler.jsonc`; public health confirmed identical configured and running digests. Temporary registry secrets were verified removed. Docker and production builds were not run locally.

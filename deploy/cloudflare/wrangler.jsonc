@@ -29,8 +29,7 @@
   ],
   "vars": {
     "AI_GATEWAY_MODEL": "openai/gpt-6.1-sol",
-    "DEMO_DAILY_TURNS": "50",
-    "KEEP_AWAKE_UNTIL": "2026-11-01T09:40:00.000Z",
+    "KEEP_AWAKE_UNTIL": "2026-10-27T12:50:40.350Z",
   },
   "durable_objects": {
     "bindings": [

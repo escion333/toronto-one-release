@@ -1,8 +1,15 @@
 import { DurableObject } from "cloudflare:workers";
 import { keepAwakeSettings, maintainWarmth } from "./keep-awake.ts";
 import { applyLedger } from "../../src/lib/ai/host-ledger.ts";
+import {
+  launchEndsAt,
+  launchPolicy,
+  launchStartedAt,
+} from "../../src/lib/ai/launch-policy.ts";
+import { ChatAdmission, containerAllocation } from "./admission.ts";
 
 const prefix = "/toronto-one";
+const chatAdmission = new ChatAdmission();
 export class TorontoOne extends DurableObject {
   starting;
 
@@ -23,12 +30,53 @@ export class TorontoOne extends DurableObject {
     const running = await this.ctx.container.inspect();
     const settings = keepAwakeSettings(this.env.KEEP_AWAKE_UNTIL);
     const alarm = await this.ctx.storage.getAlarm();
+    const policy = launchPolicy();
+    let admission = null;
+    try {
+      const response = await this.ctx.container
+        .getTcpPort(8080)
+        .fetch("http://container/toronto-one/api/health", {
+          signal: AbortSignal.timeout(2000),
+        });
+      if (response.ok) {
+        const health = await response.json();
+        const { active, queued } = health.admission ?? {};
+        if (
+          Number.isSafeInteger(active) &&
+          active >= 0 &&
+          Number.isSafeInteger(queued) &&
+          queued >= 0
+        )
+          admission = { active, queued };
+      } else await response.body?.cancel();
+    } catch {
+      // Missing aggregate metadata never invents zero activity or logs resident data.
+    }
+    const labels = running?.labels;
+    const requestedAtStart = labels?.capacity
+      ? {
+          profile: labels.capacity,
+          vcpu: Number(labels.vcpu),
+          memoryMib: Number(labels.memoryMib),
+          diskMb: Number(labels.diskMb),
+        }
+      : null;
     return {
       ok: true,
       keepAwakeUntil: settings.active ? this.env.KEEP_AWAKE_UNTIL : null,
       nextWarmAlarm: alarm === null ? null : new Date(alarm).toISOString(),
       runningImage: running?.image ?? null,
       configuredImage: this.ctx.container.images.base,
+      admission,
+      launch: {
+        active: policy.launch,
+        startedAt: launchStartedAt,
+        endsAt: launchEndsAt,
+      },
+      configuredCapacity: containerAllocation(),
+      // inspect() exposes start labels, not measured CPU/RAM or utilization.
+      runningCapacityRequest: requestedAtStart,
+      capacityEvidence: requestedAtStart ? "container-start-labels" : "not-reported",
     };
   }
 
@@ -84,28 +132,32 @@ export class TorontoOne extends DurableObject {
       return new Response("Invalid input", { status: 400 });
     }
     return this.ctx.storage.transaction((storage) =>
-      applyLedger(storage, input, Number(this.env.DEMO_DAILY_TURNS ?? 50)),
+      applyLedger(storage, input, launchPolicy().dailyTurns),
     );
   }
 
   async start() {
     const container = this.ctx.container;
     const configuredImage = container.images.base;
+    const { profile, ...allocation } = containerAllocation();
     const running = await container.inspect();
     if (running?.image && running.image !== configuredImage) await container.destroy();
     if (!container.running)
       container.start({
         image: configuredImage,
-        instance: { vcpu: 0.5, memoryMib: 2048, diskMb: 6144 },
+        instance: allocation,
+        labels: {
+          capacity: profile,
+          vcpu: String(allocation.vcpu),
+          memoryMib: String(allocation.memoryMib),
+          diskMb: String(allocation.diskMb),
+        },
         enableInternet: true,
         env: {
           AI_GATEWAY_API_KEY: this.env.AI_GATEWAY_API_KEY ?? "",
           AI_GATEWAY_MODEL: this.env.AI_GATEWAY_MODEL ?? "openai/gpt-6.1-sol",
           PUBLIC_ORIGIN: "https://www.tomsanee.com",
           REMOTE_CITY_BROWSER: "true",
-          DEMO_MAX_SESSIONS: "4",
-          DEMO_MAX_CONCURRENT_RUNS: "2",
-          DEMO_DAILY_TURNS: String(this.env.DEMO_DAILY_TURNS ?? 50),
           PRIVATE_STORE_URL: "https://www.tomsanee.com/toronto-one/_private/store",
           PRIVATE_STORE_TOKEN: this.env.PRIVATE_STORE_TOKEN ?? "",
         },
@@ -138,6 +190,17 @@ const worker = {
     if (url.pathname !== prefix && !url.pathname.startsWith(`${prefix}/`))
       return new Response("Not found", { status: 404 });
     try {
+      if (request.method === "POST" && url.pathname === `${prefix}/api/chat`) {
+        const admission = await chatAdmission.admit(request);
+        if (!admission.allowed)
+          return new Response("Please wait a moment before sending another message.", {
+            status: 429,
+            headers: {
+              "Retry-After": String(admission.retryAfterSeconds),
+              "Cache-Control": "no-store",
+            },
+          });
+      }
       const app = env.APP.getByName("public-v1");
       if (url.pathname === `${prefix}/api/health`) {
         const status = await app.hostingStatus();
