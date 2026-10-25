@@ -2,7 +2,7 @@
 
 ## Automated checks
 
-Run the complete local suite with the pinned package manager:
+Run the complete remote suite with the pinned package manager:
 
 ```sh
 corepack pnpm@10.34.8 check
@@ -16,7 +16,7 @@ Chat-source tests additionally cover exact excerpt validation, stale/missing obs
 
 Voting tests cover intersection parsing, ambiguous and divided-street crossings, verified public-facility selection, distance bounds, missing City data, library-name fallback, browser-bound example labels, immutable earlier results and venue-only map queries. Retained messages with missing or duplicate IDs are repaired to stable distinct IDs, and new assistant streams generate IDs explicitly.
 
-## Tennis reservation preview (local)
+## Tennis reservation preview
 
 The tennis implementation passed strict TypeScript, ESLint and 96 tests, including the earlier context/error regressions. New tests cover the zero-dollar default, date/time/group bounds, exact observed court binding, charge ceilings including account-credit cases, changed or expired checkout payloads, duplicate/unknown handoff protection, cancelled/mismatched permit evidence and private checkpoint restoration. An owned browser fixture exercises cart review, resident handoff, account matching, official document capture and PDF-only retry after an export failure. Every network request in that fixture is intercepted; it makes no request to the City and creates no City reservation.
 
@@ -28,7 +28,9 @@ A subsequent resident-authorized live walkthrough verified City sign-in, the req
 
 That walkthrough exposed the dedicated quick-reservation checkout path and different cart fields. The adapter now reads the existing cart, expands one quick-reservation item, matches the booking-name heading and exact court/attendee/interval fields, tolerates adjacent date/time spans, and counts subtotal plus tax even after account credits. An additional fully intercepted owned browser fixture exercises those layouts and rejects multiple bookings or changed attendance. Completed reservation, official permit capture and matching account records remain unverified; no live permit was created.
 
-Source `034d60f` passed the complete remote `pnpm check` pipeline in [GitHub run 40240252636](https://github.com/escion333/toronto-one-release/actions/runs/40240252636): formatting, ESLint, route generation, strict TypeScript, all 96 tests and the production image build. The resulting private image digest is `sha256:7688f13257da4d6b2ce1e2054097f35e9e494776019be59d9a88fde4ae1b94dc`. Temporary registry credentials were removed. Nothing was deployed, and the production image pin remains unchanged. Docker and application production builds stayed off locally. [Draft PR #1](https://github.com/escion333/toronto-one-release/pull/1) retains the completed-permit validation limitation.
+Source `034d60f` passed the complete remote `pnpm check` pipeline in [GitHub run 40240252636](https://github.com/escion333/toronto-one-release/actions/runs/40240252636): formatting, ESLint, route generation, strict TypeScript, all 96 tests and the production image build. The resulting private image digest was `sha256:7688f13257da4d6b2ce1e2054097f35e9e494776019be59d9a88fde4ae1b94dc`. Temporary registry credentials were removed. That build was not deployed.
+
+[PR #1](https://github.com/escion333/toronto-one-release/pull/1) was merged and deployed on October 25, 2026 from merge commit `a43b4c2`. The authorized `pnpm run deploy` completed formatting, ESLint, route generation, strict TypeScript, all 96 tests and the production image build remotely in [GitHub run 40240710687](https://github.com/escion333/toronto-one-release/actions/runs/40240710687). Cloudflare Worker version `a547f352-92a7-4ea3-b8ad-f65603c963c3` deployed successfully. Public health independently confirmed the exact configured and running image digest `sha256:066811115aa73bf6575482e0c3306f2812d420e97b339426c78f8577fa86925d`; the canonical Wrangler pin records that image. The deployed chat loaded and displayed “Reserve a tennis court.” The form and server retain the $0 default, with automated coverage rejecting positive charges above that ceiling. This release check used no City sign-in, legal approval, payment or real booking submission. Completed permit/account matching remains unverified live. Temporary GitHub registry secrets were verified absent, and `pnpm deploy:check` passed. Docker and application production builds stayed off locally.
 
 ## Public browser and model checks
 
