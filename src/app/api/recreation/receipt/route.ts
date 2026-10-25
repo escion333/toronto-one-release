@@ -9,12 +9,16 @@ export async function GET(request: Request) {
   const file = pdf ? session?.booking.receiptPdfPath() : session?.booking.receiptPath();
   if (!file)
     return new Response("No receipt captured in this session.", { status: 404 });
+  const kind =
+    session?.booking.snapshot().receipt?.documentKind === "permit"
+      ? "permit"
+      : "receipt";
   // Private runtime evidence is never a deployment/build asset.
   return new Response(await readFile(/* turbopackIgnore: true */ file), {
     headers: {
       "Content-Type": pdf ? "application/pdf" : "image/png",
       "Cache-Control": "private, no-store",
-      "Content-Disposition": `inline; filename=city-receipt.${pdf ? "pdf" : "png"}`,
+      "Content-Disposition": `inline; filename=city-${kind}.${pdf ? "pdf" : "png"}`,
     },
   });
 }

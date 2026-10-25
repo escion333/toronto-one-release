@@ -16,9 +16,18 @@ export function approvedPageUrl(value: string): string {
       /^\/(home|hub|votingplace|candidateslist|ballotsample)\/?$/i.test(u.pathname)) ||
     (u.hostname === "www.toronto.ca" &&
       (u.pathname.startsWith("/city-government/elections/") ||
-        u.pathname.startsWith("/explore-enjoy/parks-recreation/"))) ||
+        u.pathname.startsWith("/explore-enjoy/parks-recreation/") ||
+        /^\/services-payments\/venues-facilities-bookings\/booking-park-recreation-facilities\/(?:online-booking-information-conditions|simple-permit-booking)\/$/.test(
+          u.pathname,
+        ))) ||
     (u.hostname === "anc.ca.apm.activecommunities.com" &&
-      /^\/toronto\/activity\/search(?:\/detail\/\d+)?\/?$/.test(u.pathname));
+      (/^\/toronto\/activity\/search(?:\/detail\/\d+)?\/?$/.test(u.pathname) ||
+        (u.pathname === "/toronto/reservation/landing/quick" &&
+          u.searchParams.get("groupId") === "2" &&
+          u.searchParams.getAll("groupId").length === 1 &&
+          [...u.searchParams.keys()].every((key) =>
+            ["groupId", "locale"].includes(key),
+          ))));
   if (!allowed)
     throw new Error(
       "That page is outside the reviewed Toronto election/recreation scope.",

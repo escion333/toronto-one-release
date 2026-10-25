@@ -1,4 +1,51 @@
+const requestErrors = {
+  context_limit:
+    "This conversation is too large for another AI request. Start a new session after saving any receipt. Check Tasks before retrying a reservation.",
+  budget_unavailable:
+    "AI budget protection is temporarily unavailable. Please try again later. Check Tasks before retrying a reservation.",
+  budget_exhausted:
+    "The public AI allowance has been reached. Please come back later. Check Tasks before retrying a reservation.",
+  unsupported_call:
+    "This AI request is outside the supported model and content limits. Please try a shorter text request. Check Tasks before retrying a reservation.",
+} as const;
+
+export class AIRequestError extends Error {
+  readonly code: keyof typeof requestErrors;
+  constructor(code: keyof typeof requestErrors) {
+    super(requestErrors[code]);
+    this.name = "AIRequestError";
+    this.code = code;
+  }
+}
+
+export function aiFailureCode(error: unknown): string {
+  let current = error;
+  for (let depth = 0; depth < 5; depth++) {
+    if (current instanceof AIRequestError) return current.code;
+    if (current instanceof Error && /abort|timeout/i.test(current.name))
+      return "interrupted";
+    if (typeof current !== "object" || current === null) break;
+    if (
+      "statusCode" in current &&
+      typeof current.statusCode === "number" &&
+      Number.isInteger(current.statusCode) &&
+      current.statusCode >= 400 &&
+      current.statusCode <= 599
+    )
+      return `upstream_${current.statusCode}`;
+    if (!("cause" in current)) break;
+    current = current.cause;
+  }
+  return "unknown";
+}
+
 export function publicAIError(error: unknown): string {
+  const code = aiFailureCode(error);
+  if (Object.hasOwn(requestErrors, code)) {
+    // Narrow against the fixed allowlist; never return arbitrary error messages.
+    for (const [key, message] of Object.entries(requestErrors))
+      if (code === key) return message;
+  }
   if (error instanceof Error) {
     if (
       /Every result fact must be an exact excerpt|Observe a fresh official page/i.test(
@@ -23,10 +70,7 @@ export function publicAIError(error: unknown): string {
     )
   )
     return "Vercel AI Gateway needs billing verification. Add a valid payment card to the Gateway team, then retry. No booking was submitted.";
-  const status =
-    typeof error === "object" && error !== null && "statusCode" in error
-      ? error.statusCode
-      : undefined;
+  const status = code.startsWith("upstream_") ? Number(code.slice(9)) : undefined;
   if (status === 401 || status === 403)
     return "AI Gateway authentication failed. Check the server's Gateway key and account access, then retry.";
   if (status === 402)
@@ -34,7 +78,10 @@ export function publicAIError(error: unknown): string {
   if (status === 429) return "The model is rate limited. Wait briefly and retry.";
   if (status === 404)
     return "The configured model is unavailable to this Gateway account. Check AI_GATEWAY_MODEL.";
-  if (error instanceof Error && /abort|timeout/i.test(error.name + error.message))
-    return "The request stopped before it finished. You can retry; no booking was submitted.";
-  return "The AI connection could not finish. Check Gateway access or connectivity and retry. No booking was submitted.";
+  if (
+    code === "interrupted" ||
+    (error instanceof Error && /abort|timeout/i.test(error.name + error.message))
+  )
+    return "The request stopped before it finished. Check Tasks before retrying a reservation.";
+  return "The request could not finish. Check Tasks for booking progress before retrying.";
 }

@@ -11,11 +11,11 @@ The integrated light-only landing page uses [www.tomsanee.com/toronto-one](https
 ## Capabilities
 
 - **Voting:** municipal voting-place information from MyVote using a street address, or a nearby public example address selected from City data for an intersection. Example results clearly distinguish the public address from the resident's assignment. Voting cards include a Google Maps venue widget. It does not determine eligibility or check voter registration.
-- **Recreation:** live activity discovery and a reviewed, authenticated zero-dollar reservation flow. Residents sign in directly with the City, choose a participant, accept waivers themselves and approve the exact checkout before submission.
+- **Recreation:** live activity discovery, official guidance across recreation service families, a reviewed zero-dollar activity enrollment adapter, and a tennis court reservation preview. Tennis requests use the City’s dedicated court schedule, a resident-selected maximum total (default $0), private City checkout and matching official permit/account evidence. Residents select their City participant and slot, personally handle declarations, signatures and payment, and return for verification. Authenticated tennis checkout compatibility still requires a resident-controlled live validation; see [validation](docs/VALIDATION.md).
 - **Tasks:** sourced findings and verified booking receipts within a temporary local session.
 - **Companion:** seven animation states driven by actual agent activity, using transparent frames rendered from a Blender character, with reduced-motion and static fallbacks.
 
-The hosted configuration uses a Cloudflare Worker and one container. It supports isolated anonymous visits, inline interactive questions, conversation restoration and a resident-controlled private City browser. Nonzero checkout totals and unsupported portal requirements stop for attention. This is a bounded public preview, with temporary sessions rather than durable background tracking.
+The hosted configuration uses a Cloudflare Worker and one container. It supports isolated anonymous visits, inline interactive questions, conversation restoration and a resident-controlled private City browser. Activity enrollment stops at nonzero totals. Tennis checkout is resident-controlled and stops when the verified total exceeds the chosen maximum; unsupported portal requirements stop for attention. This is a bounded public preview, with temporary sessions rather than durable background tracking.
 
 ## Run locally
 

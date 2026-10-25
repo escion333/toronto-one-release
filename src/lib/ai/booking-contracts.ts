@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { MascotState } from "../demo/types.ts";
+import { tennisReservationSchema } from "./tennis-contracts.ts";
 export const activitySchema = z.object({
   url: z.string().url(),
   number: z.string(),
@@ -21,6 +22,8 @@ export const bookingStateSchema = z.object({
     "outcome_unknown",
     "confirmed",
     "needs_attention",
+    "facility_details_required",
+    "resident_checkout_required",
   ]),
   message: z.string(),
   executionMs: z.number().optional(),
@@ -38,6 +41,7 @@ export const bookingStateSchema = z.object({
     )
     .optional(),
   activity: activitySchema.optional(),
+  facility: tennisReservationSchema.optional(),
   participants: z
     .array(z.object({ id: z.string().uuid(), label: z.string() }))
     .optional(),
@@ -53,12 +57,25 @@ export const bookingStateSchema = z.object({
       terms: z.string(),
     })
     .optional(),
+  facilityReview: z
+    .object({
+      id: z.string().uuid(),
+      digest: z.string(),
+      expiresAt: z.number(),
+      expired: z.boolean().optional(),
+      participant: z.string(),
+      totalCents: z.number().int().nonnegative(),
+      currency: z.literal("CAD"),
+    })
+    .optional(),
   receipt: z
     .object({
       number: z.string(),
       capturedAt: z.string(),
       accountVerified: z.boolean(),
       evidenceUrl: z.string(),
+      documentKind: z.literal("permit").optional(),
+      permitNumber: z.string().optional(),
     })
     .optional(),
   timings: z.array(z.object({ phase: z.string(), ms: z.number(), ok: z.boolean() })),
@@ -91,6 +108,8 @@ export function bookingMascotState(input: {
       "resident_action_required",
       "review_required",
       "sign_in_required",
+      "facility_details_required",
+      "resident_checkout_required",
     ].includes(input.status ?? "")
   )
     return "needs_input";

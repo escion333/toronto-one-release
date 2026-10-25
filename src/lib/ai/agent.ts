@@ -19,6 +19,9 @@ import { citeObservation } from "./citations.ts";
 import { makeBookingPlan, type AgentSession } from "./session.ts";
 import { resolveVotingIntersection } from "./voting.ts";
 import { createSpendMiddleware } from "./spend.ts";
+import { cityModelMessages } from "./context.ts";
+import { tennisBookingUrl } from "./tennis-contracts.ts";
+import { recreationCapabilities } from "./recreation-capabilities.ts";
 
 export function configuredModel() {
   return process.env.AI_GATEWAY_MODEL?.trim() || "openai/gpt-6.1-sol";
@@ -45,6 +48,7 @@ export function createCityAgent(session: AgentSession) {
       session.browser.timing.record("model_inference", performance.now() - modelStart);
     },
     prepareCall: (options) => ({ ...options, onError: () => undefined }),
+    prepareStep: ({ messages }) => ({ messages: cityModelMessages(messages) }),
     stopWhen: isStepCount(18),
     instructions: `You are Toronto One, an independent, warm, capable raccoon concierge for CITY OF TORONTO municipal services only. Today in Toronto is ${new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", dateStyle: "full" }).format(new Date())}.
 CONVERSATION STYLE: Sound like a helpful neighbour in a text conversation. Use one short sentence by default; for example, "What days work for you?" Ask one short question at a time. Skip greetings, praise, preambles and repeated explanations. Let result cards hold service facts and links, and let the source disclosure hold quotations. Do not repeat source excerpts in the chat text unless the resident asks for the exact wording. Mention fees, consent, uncertainty and blockers when they affect the current decision; never omit a consequential warning to be brief. Do not repeat card details or narrate browser clicks.
@@ -58,9 +62,46 @@ ELECTION: accept a Toronto intersection OR street address. If neither is supplie
 RECREATION: ask activity, location/date/age constraints only as needed. Use the City's ACTIVE /toronto/ tenant public search. Search uses Search by Activity name or number and Search button. For Canoe Landing the reviewed public search URL is https://anc.ca.apm.activecommunities.com/toronto/activity/search?center_ids=1330&viewMode=list . Use its actual keyword field and Search button; do not guess keyword query parameters. Choose activity detail links (legacy links are normalized by the application). The public browser cannot click Enroll Now, wishlists, login, checkout or waivers. For a selected activity use prepareRecreationBooking; application code handles authenticated preparation and pauses for participant/waiver/final approval in the UI. Inspect each recommended activity's detail page; availability is only a checked-at observation, never a guarantee. Full and scheduled do not mean available. Check the ACTUAL detail location and dates against the request, not merely the search filter or title. Every activity card must include exact quotes for its name, location, date/time, age restriction and displayed availability; when a field is absent say it was not provided rather than invent it. A card for a different centre/date is not a match; disclose no matching result and ask before expanding the search. Offer genuine alternatives only after inspecting them. Never presume age, residence, waiver acceptance or account access. Potential check-in fees are not waived by a free reservation.
 STRUCTURED RESULTS: after finding useful evidence, call publishResult with exact SHORT quotes from the SAME observation, including dates/times/availability/eligibility and location when displayed. For an assigned voting place use a /votingplace observation. For an activity use its DETAIL observation, not a search list. The application checks quote support and supplies the source/time. You may publish multiple distinct activity cards. Never splice unrelated activities into one card. Summarize with plain text after publishing; the cards hold official links. Do not emit markdown links invented from memory.
 CHAT SOURCES: publishResult automatically attaches its supporting sources to this reply. For factual guidance in an ordinary text reply without a result card, call citeSource with a fresh observation ID and one short, relevant, exact supporting excerpt before answering. Prefer a complete sentence without navigation text or unrelated examples. Cite only pages actually supporting the reply, not every navigation step. Titles, URLs and check times come from the application. A visited page alone is shown as Pages checked; selected supporting evidence appears under Sources. Never claim that a citation verifies eligibility, guarantees availability or proves a booking.
+RECREATION COVERAGE: Use recreationServiceGuide for official guidance across activities, facility bookings and memberships. Distinguish activity enrollment from timed facility reservations. Paid activity enrollment, memberships, cancellations and facilities beyond tennis use resident-controlled official City flows; explain the available assistance and use fresh official evidence. Never silently search the activity catalog for a court rental.
+TENNIS COURTS: Use searchTennisCourts for current courts and booking reminders. Court names are official observed resources; public listings do not prove availability. Sign-in is required to see accurate times. Do not invent nearby distances, open slots or a zero-dollar fee; show observed charges and seasonal rules, and explain conflicting published guidance instead of guessing. For a selected court publishResult kind facility with facilityName exactly matching a returned tennisCourts name, then use prepareTennisReservation only when the resident asks to reserve. The application asks for date, one-hour time, group size and maximum total (default $0); never infer a higher budget. The resident controls City participant selection, legal approvals, signatures and payment. The application reviews the exact City cart before checkout handoff and confirms only after matching an official permit and City account evidence. Unknown outcomes require reconciliation, never a fresh payment. Other court durations and organization bookings require direct City assistance.
+BROWSER CONTEXT: Older raw page observations are removed from model working context. Re-open or observe the relevant page when you need its exact evidence again; do not reconstruct missing quotes or control references from memory.
 BOOKING: Use the private City adapter for authenticated recreation booking. When a resident asks to book a selected activity, publish its source result then call prepareRecreationBooking with the result ID. It opens the legitimate City interface in a temporary City browser inside the conversation; the resident signs in directly. The application selects only the resident-chosen participant, prepares known steps and shows an exact zero-dollar checkout preview for explicit final approval. The model cannot grant approval, submit checkout, accept waivers, access credentials or assert success. Point to the booking panel in the conversation; the same progress is also available in Tasks. Never promise a held or booked spot without application-verified official receipt AND matching account evidence. A nonzero total or unknown form requires resident attention; never silently fall back to a link. For simple discovery publish one best matching card, not redundant duplicate cards.
 When you need resident information or a decision, use requestResidentInput with a few short choices when that helps, then render the appropriate inline control. Never ask for credentials or legal acceptance with a conversational input tool. Use requestResidentInput then ask one concise question. If a tool fails, explain the failure honestly; try a safe alternative or ask for correction. A missing address suggestion can still be loading: observe again before choosing Go; disabled controls are not offered. Never fabricate a fallback answer. Keep progress concise; don't narrate every click. Write plain text without Markdown formatting.`,
     tools: {
+      recreationServiceGuide: tool({
+        description:
+          "Read fresh official guidance for the requested recreation transaction family and report the application’s actual assistance. This grants no authority to transact.",
+        inputSchema: z.object({
+          service: z.enum(["activities", "tennis", "facilities", "memberships"]),
+        }),
+        execute: ({ service }) =>
+          run(async () => ({
+            ...(await session.browser.open(recreationCapabilities[service].guideUrl)),
+            assistance: recreationCapabilities[service].assistance,
+          })),
+      }),
+      searchTennisCourts: tool({
+        description:
+          "Read the City’s actual tennis court resources and booking reminders from its dedicated reservation schedule. This public lookup does not show authenticated availability or reserve a slot. Never use activity search for court hire.",
+        inputSchema: z.object({}),
+        execute: () => run(() => session.browser.searchTennisCourts()),
+      }),
+      prepareTennisReservation: tool({
+        description:
+          "Start a selected, source-verified tennis court request when the resident asks to reserve. The resident supplies date/time and maximum total in the booking panel and personally handles City legal approvals and payment. No reservation is submitted by this tool.",
+        inputSchema: z.object({ resultId: z.string().uuid() }),
+        execute: ({ resultId }) => {
+          const result = session.results.find(
+            (item) => item.id === resultId && item.kind === "facility",
+          );
+          if (!result?.facility)
+            throw new Error(
+              "Publish a court from the current official tennis schedule first.",
+            );
+          const state = session.booking.requestTennisPreparation(result.facility);
+          return { status: state.status, message: state.message };
+        },
+      }),
       recreationBookingStatus: tool({
         description:
           "Read the application's authoritative current recreation booking progress and whether receipt/account verification succeeded. No private account content or identifiers are returned. Use this for existing booking status; never invent confirmation from conversation text.",
@@ -219,6 +260,17 @@ When you need resident information or a decision, use requestResidentInput with 
             throw new Error(
               "Inspect the actual activity detail page before publishing an activity.",
             );
+          if (
+            input.kind === "facility" &&
+            (!input.facilityName ||
+              !observed.tennisCourts?.includes(input.facilityName) ||
+              u.origin !== new URL(tennisBookingUrl).origin ||
+              u.pathname !== "/toronto/reservation/landing/quick" ||
+              u.searchParams.get("groupId") !== "2")
+          )
+            throw new Error(
+              "Select an exact court from a fresh official tennis schedule observation.",
+            );
           const result: CityResult = {
             id: randomUUID(),
             kind: input.kind,
@@ -229,16 +281,23 @@ When you need resident information or a decision, use requestResidentInput with 
                   : "Your voting information"
                 : input.kind === "recreation"
                   ? "Toronto recreation activity"
-                  : "Official City guidance",
+                  : input.kind === "facility"
+                    ? (input.facilityName ?? "Tennis court")
+                    : "Official City guidance",
             sourceUrl: observed.url,
             checkedAt: observed.checkedAt,
             facts: input.facts,
             sources: [citation],
-            status:
-              input.kind === "recreation"
-                ? "requires_official_booking"
-                : "information_found",
+            status: ["recreation", "facility"].includes(input.kind)
+              ? "requires_official_booking"
+              : "information_found",
           };
+          if (input.kind === "facility" && input.facilityName)
+            result.facility = {
+              kind: "tennis",
+              name: input.facilityName,
+              sourceUrl: tennisBookingUrl,
+            };
           if (input.kind === "voting" && observed.voting)
             result.voting = structuredClone(observed.voting);
           if (input.kind === "recreation") {

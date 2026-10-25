@@ -12,6 +12,7 @@ import {
 import path from "node:path";
 import { applyLedger, type LedgerStorage } from "./host-ledger.ts";
 import { launchPolicy } from "./launch-policy.ts";
+import { AIRequestError } from "./errors.ts";
 
 type Model = ReturnType<typeof wrapLanguageModel>;
 type CallParams = Parameters<Model["doGenerate"]>[0];
@@ -48,8 +49,7 @@ export type SpendOperation = {
 };
 export type SpendLedger = (operation: SpendOperation) => Promise<void>;
 
-const unavailable = () =>
-  new Error("AI budget protection is temporarily unavailable. Please try again later.");
+const unavailable = () => new AIRequestError("budget_unavailable");
 
 let localTransaction = Promise.resolve();
 
@@ -103,9 +103,7 @@ async function localSpend(operation: SpendOperation) {
 }
 
 function ledgerFailure(status: number) {
-  return status === 429
-    ? new Error("The public AI allowance has been reached. Please come back later.")
-    : unavailable();
+  return status === 429 ? new AIRequestError("budget_exhausted") : unavailable();
 }
 
 /** No retries: a timed-out reservation/settlement may already be durable. */
@@ -154,7 +152,7 @@ export function reserveCostMicros(params: CallParams, modelId: string) {
     (params.providerOptions && Object.keys(params.providerOptions).length > 0) ||
     params.tools?.some((entry) => entry.type !== "function")
   )
-    throw new Error("This model call is outside the configured AI budget protection.");
+    throw new AIRequestError("unsupported_call");
   for (const message of params.prompt) {
     if (typeof message.content === "string") continue;
     for (const part of message.content) {
@@ -172,7 +170,7 @@ export function reserveCostMicros(params: CallParams, modelId: string) {
             part.output.type,
           ))
       )
-        throw new Error("This content is outside the configured AI budget protection.");
+        throw new AIRequestError("unsupported_call");
     }
   }
   const bytes = Buffer.byteLength(
@@ -185,9 +183,7 @@ export function reserveCostMicros(params: CallParams, modelId: string) {
     "utf8",
   );
   if (bytes > modelSpendCeiling.maxRequestBytes)
-    throw new Error(
-      "This conversation has reached its context limit. Please start a new visit.",
-    );
+    throw new AIRequestError("context_limit");
   return (
     (bytes + modelSpendCeiling.inputOverheadTokens) *
       modelSpendCeiling.inputMicrosPerToken +

@@ -1,12 +1,14 @@
 import { z } from "zod";
 import type { MascotState } from "../demo/types.ts";
+import { tennisResourceSchema } from "./tennis-contracts.ts";
 
 export const factSchema = z.object({
   label: z.string().min(1).max(70),
   quote: z.string().min(3).max(1200),
 });
 export const resultInputSchema = z.object({
-  kind: z.enum(["voting", "recreation", "guidance"]),
+  kind: z.enum(["voting", "recreation", "facility", "guidance"]),
+  facilityName: z.string().min(5).max(180).optional(),
   observationId: z.string().uuid(),
   facts: z.array(factSchema).min(1).max(10),
 });
@@ -39,11 +41,12 @@ export const sourceCitationSchema = citationInputSchema.extend({
 export type SourceCitation = z.infer<typeof sourceCitationSchema>;
 export const cityResultSchema = z.object({
   id: z.string().uuid(),
-  kind: z.enum(["voting", "recreation", "guidance"]),
+  kind: z.enum(["voting", "recreation", "facility", "guidance"]),
   title: z.string(),
   sourceUrl: z.string().url(),
   checkedAt: z.string(),
   voting: votingDetailsSchema.optional(),
+  facility: tennisResourceSchema.optional(),
   facts: z.array(factSchema.extend({ sourceUrl: z.string().url().optional() })),
   sources: z.array(sourceCitationSchema).optional(),
   status: z.enum(["information_found", "requires_official_booking"]),

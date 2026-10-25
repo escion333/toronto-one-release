@@ -25,7 +25,7 @@ export function useRecreationBooking() {
       clearInterval(timer);
     };
   }, []);
-  async function action(input: Record<string, string | boolean>) {
+  async function action(input: Record<string, string | boolean | number>) {
     setBusy(true);
     setError(null);
     try {

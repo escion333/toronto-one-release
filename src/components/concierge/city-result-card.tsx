@@ -101,10 +101,12 @@ export function CityResultCard({
         {voting && result.voting?.venue && (
           <VotingLocationMap venue={result.voting.venue} />
         )}
-        {result.kind === "recreation" && onPrepare && (
+        {["recreation", "facility"].includes(result.kind) && onPrepare && (
           <div className="result-next">
             <Button className="w-full" onClick={() => onPrepare(result.id)}>
-              Prepare reservation
+              {result.kind === "facility"
+                ? "Choose court date & time"
+                : "Prepare reservation"}
             </Button>
             <p className="result-availability-note">
               Not reserved yet.

@@ -27,6 +27,8 @@ The voting lookup tool accepts either a street address or an intersection. Inter
 
 ### Chat sources
 
+Before each model step, older public-browser page dumps are replaced in model working context with navigation metadata. Two recent observation exchanges remain available in full; older tool calls and their paired metadata preserve which pages have already been checked. Resident choices, published cards, selected citations and booking progress remain in context. This does not alter UI history or server-side evidence validation. Local context and spend-guard failures have distinct public errors; operational failure logs use fixed codes without prompt text, page content or provider response bodies.
+
 Each assistant reply has one collapsed source disclosure. `publishResult` attaches supporting citations automatically; `citeSource` attaches exact excerpts for ordinary factual replies without creating a result card. The server resolves observation IDs to the actual page URL, title and check time, checks freshness and verifies excerpt support. Linked recreation listing excerpts retain their own observation metadata rather than inheriting the detail page's timestamp.
 
 The disclosure counts unique approved page URLs, ignoring fragments, query ordering and trailing slashes while preserving distinct search filters and activity IDs. Repeated citations share one source entry; excerpts from different observations keep their original check times in metadata. The UI shows one excerpt preview per source with its matching observation time. Without selected supporting excerpts, successful browser observations appear as **Pages checked** rather than **Sources**. Failed and unfinished steps do not add sources. Chat result cards share the reply's disclosure; Tasks retain their own disclosure. Citation metadata stays in the existing temporary server conversation and results, with no browser-storage persistence.
@@ -40,6 +42,16 @@ The private browser opens at a desktop viewport (1280px wide) and scales into th
 The adapter prepares the reviewed activity and participant/cart flow. The resident selects the participant and personally accepts the City waiver. Before submission, application code requires a fresh approval bound to the exact activity, participant, zero-dollar amount and accepted terms. It rechecks the cart and persists an atomic outbound intent before pressing Finish once.
 
 Confirmation requires an official numbered receipt and matching enrollment evidence in the City account. Printable receipt capture is a separate operation: an export failure must not resubmit an already confirmed reservation. An uncertain submission outcome blocks retry and requires reconciliation. Unsupported forms, security challenges and nonzero totals stop for resident attention.
+
+### Tennis facility workflow
+
+`TennisBooking` is a separate deterministic adapter sharing the owner-bound private browser with activity enrollment. A public court card comes only from a fresh observed resource on the dedicated City court schedule. Public tools cannot read authenticated slot grids, participants, carts, payment fields or permit contents.
+
+The resident’s date/time/group-size/maximum-total request is validated server-side; the default maximum is zero. The adapter opens the requested date and court, while the resident selects the City participant and slot and handles City declarations/signatures. A single-item cart must match the court, date, complete one-hour interval, attendee count, booking name and complete amount. `TennisApproval` binds that payload and expiry. Continuing rechecks it and journals a durable handoff before the resident completes payment. The model has no checkout-approval, payment or signature tool.
+
+Permit verification reads only existing City records. It matches the receipt and account reservation to the exact permit identity, charge and active status before capture and confirmation. Missing or uncertain evidence blocks confirmation and new attempts; PDF export is independent of an already verified permit. The same private storage, owner checks and checkpoint expiry apply. The private browser is controlled by the resident during their steps; confirmation does not trust their chat assertion that a payment succeeded.
+
+`recreation-capabilities.ts` routes broader recreation discovery and guidance by transaction family. It does not turn unsupported City transactions into executable model actions.
 
 ## Code boundaries
 

@@ -16,7 +16,19 @@ Chat-source tests additionally cover exact excerpt validation, stale/missing obs
 
 Voting tests cover intersection parsing, ambiguous and divided-street crossings, verified public-facility selection, distance bounds, missing City data, library-name fallback, browser-bound example labels, immutable earlier results and venue-only map queries. Retained messages with missing or duplicate IDs are repaired to stable distinct IDs, and new assistant streams generate IDs explicitly.
 
+## Tennis reservation preview (local)
+
+The tennis implementation passed strict TypeScript, ESLint and 95 tests, including the earlier context/error regressions. New tests cover the zero-dollar default, date/time/group bounds, exact observed court binding, charge ceilings including account-credit cases, changed or expired checkout payloads, duplicate/unknown handoff protection, cancelled/mismatched permit evidence and private checkpoint restoration. An owned browser fixture exercises cart review, resident handoff, account matching, official document capture and PDF-only retry after an export failure. Every network request in that fixture is intercepted; it makes no request to the City and creates no City reservation.
+
+A live public browser read returned 13 exact court resource names and the current insurance reminder from the dedicated City schedule. A real local model request published a source-verified Bestview court planning card, retained the $0 maximum and disclosed the observed fee conflict without starting sign-in or checkout. The local request form and Tasks visibility were reviewed at desktop width in both themes, with labelled 44px inputs/buttons and keyboard access. At 390px, Firefox responsive mode showed the complete form in light appearance without visible horizontal overflow. Mobile dark appearance remains unchecked: the Mac locked before that review could finish.
+
+No resident account was authenticated and no payment, legal approval, City reservation or real permit was created for this verification. Authenticated tennis cart selectors and permit-document compatibility remain unverified against an actual completed City reservation; fixture success does not establish live completion. This source has not been deployed. The full remote pipeline requires committed and pushed source; Docker and application production builds remain off locally.
+
 ## Public browser and model checks
+
+The October 25 context and failure-handling patch passed local strict TypeScript, ESLint, formatting and all 87 tests. Regression fixtures reproduce oversized accumulated directory observations and verify that compaction preserves navigation history, resident choices, cards, citations and booking status while keeping model calls within the unchanged spend guard. Local guard errors retain distinct public reasons, including through wrapped causes, without exposing provider details.
+
+Before the tennis expansion, real Gateway checks confirmed that a tennis-court reservation request immediately disclosed the unsupported court-hire flow without searching the activity catalog or preparing a booking. A separate real public activity-discovery run inspected official pages and published a sourced recreation card with the booking adapter remaining disconnected. Those earlier checks do not establish court-booking support or a completed reservation. The original production exception was not retained; the reconstructed context-limit failure does not establish the exact cause of that production error. At that checkpoint, `pnpm check` stopped at the committed-and-pushed-source prerequisite, and no remote production build or deployment of the patch was performed.
 
 ```sh
 node scripts/verify-browser.mts
@@ -82,7 +94,7 @@ Conversation and result restoration after refresh, empty results for an unrelate
 - Simulator and desktop checks do not establish full accessibility conformance or mobile frame pacing, power use and OS throttling behavior.
 - A continuous natural-language-to-confirmed-booking latency guarantee has not been established. Human authentication, waiver review and approval take variable time.
 - Gateway/model timing includes network and provider overhead. City page loading and portal timeouts can dominate the run; a warm session is not a latency guarantee.
-- The private adapter supports the reviewed zero-dollar reservation path. Paid checkout, cancellation, broad activity coverage and unsupported forms are unverified or disabled.
+- The activity adapter supports the reviewed zero-dollar enrollment path. The tennis preview adds resident-controlled checkout and permit verification; authenticated live tennis completion remains unverified. Other paid adapters, cancellation, broad transaction coverage and unsupported forms are unverified or disabled.
 - The local single-process session model is not production identity, durable task execution or a storage service.
 - Linux browser checks verify actual City sign-in loading, per-resident operating-system isolation and denial of server-file/environment access. A completed public-host login and a new official receipt still require resident-controlled review; unattended verification does not make a reservation.
 

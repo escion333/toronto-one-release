@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BookingStepError } from "@/lib/ai/recreation-booking";
 import { sameOrigin } from "@/lib/ai/policy";
 import { getSession, sessionCookie, saveConfirmedBooking } from "@/lib/ai/session";
+import { tennisRequestSchema, TennisStepError } from "@/lib/ai/tennis-contracts";
 
 const inputSchema = z.discriminatedUnion("action", [
   z.object({ action: z.enum(["connect", "resume", "disconnect"]) }),
@@ -16,6 +17,18 @@ const inputSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("reconcile") }),
   z.object({ action: z.literal("capture_receipt") }),
+  tennisRequestSchema.extend({
+    action: z.literal("tennis_details"),
+    attendees: z.coerce.number().int().min(1).max(9),
+    maxTotalCents: z.coerce.number().int().min(0).max(100_000),
+  }),
+  z.object({
+    action: z.literal("tennis_checkout"),
+    id: z.string().uuid(),
+    digest: z.string().regex(/^[a-f0-9]{64}$/),
+    approved: z.literal(true),
+  }),
+  z.object({ action: z.literal("verify_permit") }),
 ]);
 export async function GET(request: Request) {
   if (!sameOrigin(request))
@@ -60,6 +73,12 @@ export async function POST(request: Request) {
   try {
     session.booking.pauseResidentControl();
     if (input.action === "disconnect") await session.booking.close();
+    else if (input.action === "tennis_details")
+      await session.booking.setTennisRequest(input);
+    else if (input.action === "tennis_checkout")
+      await session.booking.authorizeTennisCheckout(input.id, input.digest);
+    else if (input.action === "verify_permit")
+      await session.booking.verifyTennisPermit();
     else if (input.action === "connect") await session.booking.connect();
     else if (input.action === "resume") await session.booking.resume();
     else if (input.action === "participant")
@@ -71,13 +90,15 @@ export async function POST(request: Request) {
       await session.booking.capturePrintableReceipt();
     else if (input.action === "prepare") {
       const result = session.results.find(
-        (r) => r.id === input.resultId && r.kind === "recreation",
+        (r) => r.id === input.resultId && ["recreation", "facility"].includes(r.kind),
       );
       if (!result)
         return new Response("Choose an activity found in this session.", {
           status: 409,
         });
-      await session.booking.requestPreparation(result.sourceUrl);
+      if (result.kind === "facility" && result.facility)
+        session.booking.requestTennisPreparation(result.facility);
+      else await session.booking.requestPreparation(result.sourceUrl);
     }
     await saveConfirmedBooking(session);
     ok = true;
@@ -93,7 +114,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     session.booking.preparationFailed(
-      error instanceof BookingStepError
+      error instanceof BookingStepError || error instanceof TennisStepError
         ? error.message
         : "The City's preparation step did not complete. Inspect the City browser and resume; nothing is confirmed.",
     );
@@ -101,7 +122,7 @@ export async function POST(request: Request) {
     return new Response(
       state.status === "outcome_unknown"
         ? state.message
-        : error instanceof BookingStepError
+        : error instanceof BookingStepError || error instanceof TennisStepError
           ? error.message
           : "The City browser could not complete this step. Inspect the browser for a sign-in requirement, changed form or portal error, then resume. No automatic booking retry will occur.",
       { status: 502 },

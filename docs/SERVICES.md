@@ -24,6 +24,8 @@ The agent can search public activities and inspect actual activity details. Card
 
 ## Zero-dollar recreation reservation
 
+This adapter enrolls a participant in a listed activity. Timed court reservations use the separate tennis workflow below; other facility types receive official discovery and resident-controlled booking guidance.
+
 The private adapter supports the reviewed enrollment/cart path with these conditions:
 
 - Authentication and MFA occur directly in the legitimate City interface.
@@ -41,3 +43,21 @@ Possible check-in fees remain distinct from the online total and must be disclos
 These are browser integrations with changing external pages. Portal availability, session expiry, changing capacity, form changes and authentication requirements can interrupt execution. The interface must distinguish preparation, approval, attempted submission, unknown outcome and verified confirmation. It must never substitute a simulated receipt or stale availability for a failed official operation.
 
 See [Architecture](ARCHITECTURE.md) for data and permission boundaries and [Validation](VALIDATION.md) for test coverage and remaining limits. These implementation notes do not establish a City-supported API or government endorsement.
+
+## Tennis court reservation preview
+
+Official discovery starts at the City’s [court schedule](https://anc.ca.apm.activecommunities.com/toronto/reservation/landing/quick?groupId=2), separate from activity search. Public court resources and booking reminders are evidence; accurate slot availability requires City sign-in. The application extracts full accessible court names, including resources inside the schedule’s component tree, and binds each published court card to a fresh observed resource. It does not infer proximity or availability from a court name.
+
+The first implementation supports personal match play for 1–9 attendees, one-hour times from 8 a.m. to 10 p.m., and dates from today through seven days ahead. These are application bounds; the City’s actual court/date rules still apply. The resident chooses the date, time, group size and maximum total, which defaults to $0. A zero balance due after applying an account credit does not make a nonzero total free.
+
+After direct City sign-in, the adapter opens the dedicated schedule, selects the requested date and brings the exact court into view. The resident selects the City participant and available slot and personally completes any required booking questions, declarations and signatures to reach the cart. Unknown controls require resident attention. The adapter never presses Pay or Finish, signs a declaration or accepts legal terms for the resident.
+
+Before payment handoff, the application requires a single matching court/date/time item, the booking name, matching attendee count and a verified complete total within the maximum. A fresh review is bound to this payload and rechecked when the resident continues. An outbound handoff journal is persisted before returning control for checkout. The resident completes payment directly with the City only if the details remain correct.
+
+Confirmation requires a numbered official receipt, matching facility evidence in the City account, and an official permit document with the same court, date, start/end times, booking name, charge and permit number. Missing, changed, cancelled or ambiguous evidence remains unconfirmed; the application never retries payment. Permit images/PDFs remain private and owner-bound, with the existing checkpoint retention. PDF export failure preserves a verified permit and allows a document-only retry.
+
+The cart and permit parser contracts are exercised with owned fixtures, not real resident records. Authenticated City tennis cart fields, account layout and permit document compatibility have not yet been verified in a completed live reservation. An unsupported layout or direct-PDF document stops verification rather than fabricating a permit. See [validation](VALIDATION.md).
+
+## Broader recreation assistance
+
+The concierge routes activities, tennis, other facilities and memberships to their appropriate official guidance. Paid activity enrollment, memberships, cancellation, organization permits and other facility transactions remain resident-controlled City workflows. The capability guide describes the application’s actual assistance and does not grant new transaction authority. Current costs, rules and availability still require fresh official evidence.
