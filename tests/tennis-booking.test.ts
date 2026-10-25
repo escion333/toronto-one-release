@@ -138,6 +138,8 @@ test("permit confirmation needs official document plus matching account, identit
     permit.replace("6:00 PM", "5:00 PM"),
     permit.replace("$0.00", "$5.00"),
     permit.replace("Status: Confirmed", "Status: Cancelled"),
+    permit.replace("Status: Confirmed", "Status: Pending approval"),
+    permit.replace("Status: Confirmed", ""),
     permit.replace("Permit Number: P1000", "Thank you for booking"),
   ])
     assert.throws(() => verifyTennisPermit(text, record, payload, "R1000"));

@@ -216,7 +216,10 @@ export function verifyTennisPermit(
     !containsTennisReference(accountRecord, permitNumber) ||
     readTennisTotal(permitText, "permit") !== payload.totalCents ||
     readTennisTotal(accountRecord, "permit") !== payload.totalCents ||
-    /(?:Status\s*:?\s*(?:cancelled|canceled|void|refunded|pending payment|unpaid)|This permit has been cancelled)/i.test(
+    !/\bStatus\s*:?\s*(?:confirmed|active|issued|approved|booked)\b/i.test(
+      permitText,
+    ) ||
+    /(?:Status\s*:?\s*(?:cancelled|canceled|void|refunded|pending|unpaid|provisional|expired)|This permit has been cancelled)/i.test(
       permitText + "\n" + accountRecord,
     )
   )
