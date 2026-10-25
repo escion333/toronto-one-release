@@ -70,3 +70,7 @@ corepack pnpm@10.34.8 test:live
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 
 No project-wide source licence is currently granted. Bundled third-party notices remain applicable.
+
+## Deployment
+
+Use `pnpm run deploy` after committing and pushing intended changes. Checks and the image build run on GitHub; Docker stays off locally. See [Hosting](docs/HOSTING.md).

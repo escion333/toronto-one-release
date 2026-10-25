@@ -15,7 +15,9 @@
     "test": "node --test tests/*.test.ts",
     "browser:install": "playwright install chromium",
     "test:live": "node --env-file=.env.local scripts/verify-ai.mts",
-    "dev:server": "node --env-file=.env.local server.mjs"
+    "dev:server": "node --env-file=.env.local server.mjs",
+    "deploy": "node scripts/deploy.mts",
+    "deploy:check": "node scripts/deploy.mts --check"
   },
   "dependencies": {
     "@ai-sdk/react": "4.0.157",
@@ -52,7 +54,7 @@
     "wrangler": "4.152.0"
   },
   "packageManager": "pnpm@10.34.8",
-  "description": "Toronto One — a local demonstration of a Toronto municipal concierge.",
+  "description": "Toronto One \u2014 a local demonstration of a Toronto municipal concierge.",
   "engines": {
     "node": ">=24 <27",
     "pnpm": ">=10.34.8 <11"

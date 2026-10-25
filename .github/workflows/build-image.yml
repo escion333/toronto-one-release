@@ -1,9 +1,17 @@
 name: Build Toronto One image
+run-name: Remote image ${{ inputs.release_id }}
 
 on:
   workflow_dispatch:
-  push:
-    branches: [codex/ui-remote-release]
+    inputs:
+      source_ref:
+        description: Committed source SHA to build
+        required: true
+        type: string
+      release_id:
+        description: Unique deployment request ID
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -17,12 +25,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      IMAGE: registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote:${{ github.sha }}
+      IMAGE: registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote:${{ inputs.source_ref }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate committed source
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: '[[ "$SOURCE_REF" =~ ^[a-f0-9]{40}$ ]]'
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ inputs.source_ref }}
           persist-credentials: false
-      - name: Build on GitHub's Linux runner
+      - name: Run checks and build on GitHub
         run: docker build --platform linux/amd64 --provenance=false --tag "$IMAGE" .
       - name: Push private image to Cloudflare
         env:

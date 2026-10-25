@@ -7,7 +7,7 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 ARG NEXT_PUBLIC_BASE_PATH=/toronto-one
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
-RUN chmod 755 scripts/private-chromium.sh && pnpm build
+RUN chmod 755 scripts/private-chromium.sh && pnpm check
 RUN mkdir -p /data && chmod 700 /data /app
 ENV NODE_ENV=production PORT=8080 PRIVATE_DATA_DIR=/data
 EXPOSE 8080

@@ -8,17 +8,21 @@ Cloudflare Workers Paid and Containers run the custom Next.js server, streaming 
 
 Install these Worker secrets through Wrangler or the Cloudflare dashboard: `AI_GATEWAY_API_KEY` and a random, independently generated `PRIVATE_STORE_TOKEN`. Never commit values or expose them through `NEXT_PUBLIC_*`. The Worker passes runtime secrets only to the server; resident Chromium receives a restricted environment.
 
+## Deploy updates
+
+Commit the intended changes and push them to `origin`, then run:
+
 ```sh
-corepack pnpm@10.34.8 exec wrangler deploy --config deploy/cloudflare/wrangler.jsonc
+pnpm run deploy
 ```
 
-## Remote image builds
+This is the default deployment path. It runs formatting, lint, type checking, tests and the production image build on a GitHub-hosted Linux runner, then deploys the prebuilt image to Cloudflare. Local Docker is not used or started. `pnpm deploy:check` validates the prebuilt-image configuration without building or deploying.
 
-`.github/workflows/build-image.yml` builds the Linux image on a GitHub-hosted runner and pushes it to Cloudflare’s private registry. Docker does not need to run on the developer’s computer. The workflow runs on the `codex/ui-remote-release` branch or by manual dispatch when available on the default branch.
+The command uses your existing GitHub CLI and Wrangler sign-ins. It creates registry credentials that expire after one hour, passes them through temporary repository Actions secrets, and removes those secrets after the build, including failed builds. It never uploads local environment files or sends application credentials to GitHub. If interrupted, let the existing GitHub run finish and reconcile its status and temporary secrets before retrying; the command refuses overlapping runs or leftover credentials.
 
-Supply `CF_UI_REGISTRY_USER` and `CF_UI_REGISTRY_PASSWORD` as repository Actions secrets using short-lived Cloudflare registry credentials. Remove these secrets after a one-off release. Application secrets stay in the existing Cloudflare runtime and are never provided to the image build.
+The build is tied to the pushed source commit. Uncommitted files are never uploaded. After deployment, the command waits for the public health endpoint to report the exact configured and running image digest, then updates the canonical Wrangler image pin. Include that pin in the next commit. A startup timeout requires checking the live image; it does not automatically redeploy.
 
-After the remote build succeeds, use its immutable registry digest as `containers[0].images.base.image` in a private deployment config next to the canonical Wrangler config. Deploying that registry reference uploads only the Worker and image selection; it does not invoke local Docker. Verify the public health endpoint’s configured and running image digests and the changed interface after rollout.
+The canonical Wrangler config also references a prebuilt image, so directly invoking Wrangler cannot trigger a local Docker build. Use `pnpm run deploy` for source updates; a bare Wrangler deployment only selects the already configured image. Keep Docker Desktop off. The Dockerfile is for the remote runner.
 
 ## Preview limits
 
