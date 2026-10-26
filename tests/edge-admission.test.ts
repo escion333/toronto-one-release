@@ -76,10 +76,10 @@ test("stored address keys are salted SHA-256 digests rather than raw client iden
   assert.notEqual(first, await hashClientAddress("192.0.2.2", "fixture-secret-salt"));
 });
 
-test("new starts use the fixed launch capacity only inside the original 48-hour window", () => {
+test("new starts use launch capacity through the fixed nine-day extended window", () => {
   const start = Date.parse(launchStartedAt);
   const end = Date.parse(launchEndsAt);
-  assert.equal(end - start, 48 * 60 * 60_000);
+  assert.equal(end - start, 9 * 24 * 60 * 60_000);
   assert.deepEqual(containerAllocation(start), {
     profile: "launch",
     vcpu: 2,

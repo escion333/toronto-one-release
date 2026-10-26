@@ -10,8 +10,8 @@ import { RunQueue } from "../src/lib/ai/run-queue.ts";
 
 const start = Date.parse(launchStartedAt);
 const end = Date.parse(launchEndsAt);
-test("fixed launch window lasts exactly48hours and expires without a restart", () => {
-  assert.equal(end - start, 48 * 60 * 60_000);
+test("extended launch window lasts nine days and expires without a restart", () => {
+  assert.equal(end - start, 9 * 24 * 60 * 60_000);
   assert.equal(launchPolicy(start - 1).launch, false);
   assert.equal(launchPolicy(start).launch, true);
   assert.equal(launchPolicy(end - 1).dailyTurns, 5000);
@@ -22,6 +22,15 @@ test("fixed launch window lasts exactly48hours and expires without a restart", (
   assert.equal(normal.maxSessions, 80);
   assert.notEqual(normal.spendKey, launchPolicy(start).spendKey);
   assert.equal(launchPolicy(end + 24 * 60 * 60_000).launch, false);
+});
+test("the extra week preserves launch limits and the original cumulative spend bucket", () => {
+  const originalEnd = Date.parse("2026-10-27T12:50:40.350Z");
+  assert.equal(end - originalEnd, 7 * 24 * 60 * 60_000);
+  for (const now of [originalEnd, end - 1]) {
+    assert.deepEqual(launchPolicy(now), launchPolicy(start));
+    assert.equal(launchPolicy(now).spendKey, "launch-2026-10-25");
+    assert.equal(launchPolicy(now).spendLimitMicros, 45_000_000);
+  }
 });
 test("independent visitors wait FIFO instead of being rejected at active capacity", async () => {
   const queue = new RunQueue(() => launchPolicy(start));

@@ -76,6 +76,10 @@ The final mascot is a fresh 2048px transparent render from the original Blender 
 
 ## Hosted verification
 
+### Prize-announcement extension
+
+The October 26 extension moves both the fixed launch-policy deadline and `KEEP_AWAKE_UNTIL` to `2026-11-03T12:50:40.350Z` (November 3 at 7:50:40 a.m. Toronto time). It retains all launch limits, the original cumulative US$45 spend bucket, provider budgets and automatic expiry. Regression coverage checks the extra seven days, unchanged spend accounting and the return to normal limits without a restart. Remote checks and production verification of this extension are pending at this source revision.
+
 ### Launch availability policy
 
 The October 25 launch-availability change passed local formatting, lint, strict TypeScript and all 83 tests, including fixed-window expiry, FIFO ordering/cancellation, phase-separated turn budgets, edge bursts, per-model-call durable spend reservations, unknown outcomes and booking-journal regressions. A real local six-visitor test completed with three active and three queued requests, independent cookies and retained messages/results, and sourced voting and recreation results. No booking was prepared or submitted. Provider team/key budgets and 50/75/100 percent alerts were configured and read back; no credit purchase or auto top-up change was made.

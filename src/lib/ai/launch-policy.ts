@@ -1,6 +1,6 @@
-/** Original public launch; fixed timestamps never extend on restart or redeploy. */
+/** Prize-announcement extension; fixed timestamps never roll forward on restart. */
 export const launchStartedAt = "2026-10-25T12:50:40.350Z";
-export const launchEndsAt = "2026-10-27T12:50:40.350Z";
+export const launchEndsAt = "2026-11-03T12:50:40.350Z";
 
 export function launchPolicy(now = Date.now()) {
   const launch = now >= Date.parse(launchStartedAt) && now < Date.parse(launchEndsAt);

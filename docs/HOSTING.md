@@ -26,9 +26,9 @@ The canonical Wrangler config also references a prebuilt image, so directly invo
 
 ## Preview limits
 
-The launch window is fixed to the original public deployment: October 25, 2026 at 8:50:40 a.m. Toronto time through October 27 at the same time (`2026-10-25T12:50:40.350Z` to `2026-10-27T12:50:40.350Z`). Restarts and deployments never extend it. `src/lib/ai/launch-policy.ts` applies the current policy at request time, including requests from existing visits.
+The launch window starts at the original public deployment, October 25, 2026 at 8:50:40 a.m. Toronto time. On October 26, the operator authorized a seven-day extension for visitors from the prize announcement: the deadline moves from October 27 to November 3 at 7:50:40 a.m. Toronto time (`2026-11-03T12:50:40.350Z`), exactly seven days after the original expiry. Toronto's clock change accounts for the earlier local hour. The full window is nine elapsed days. Restarts and deployments do not roll this fixed deadline forward. `src/lib/ai/launch-policy.ts` applies the current policy at request time, including requests from existing visits.
 
-| Policy                               | During the 48-hour launch         | After the launch                 |
+| Policy                               | During the extended launch        | After the launch                 |
 | ------------------------------------ | --------------------------------- | -------------------------------- |
 | Model turns per UTC day              | 5,000                             | 250                              |
 | Turns per visit                      | 100                               | 40                               |
@@ -40,7 +40,7 @@ The launch window is fixed to the original public deployment: October 25, 2026 a
 
 Requests wait for a bounded execution slot rather than opening an unbounded number of browsers. A model turn has a three-minute execution budget and bounded tool steps. Failed model runs also consume quota. The two private City desktop slots remain unchanged. Temporary session capacity is not a promise that every visitor executes at once.
 
-The application uses conservative durable AI spend accounting: US$45 total for the fixed launch and US$3 per UTC day afterward, alongside the provider team/key's US$50 budget and alerts at 50%, 75% and 100%. Provider credit availability can be lower than the configured cap. Turn limits do not establish an exact model bill; the provider cap and application accounting remain separate protections.
+The application uses conservative durable AI spend accounting: US$45 total for the entire extended launch and US$3 per UTC day afterward, alongside the provider team/key's US$50 budget and alerts at 50%, 75% and 100%. The extension preserves the original `launch-2026-10-25` spend bucket and all previously accounted usage; it neither resets the allowance nor purchases credits. Provider credit availability can be lower than the configured cap. Turn limits do not establish an exact model bill; the provider cap and application accounting remain separate protections.
 
 Model execution remains limited to 18 steps per turn, 1,800 output tokens per call and three minutes per turn, with no automatic model retries. Per-visit burst admission allows 12 requests per minute. Spend reservations include serialized text/tool bytes plus framing overhead at US$4/M input and US$15/M output; input is capped at 240,000 bytes. Known standard-context usage settles at US$2.50/M input (including a conservative cache-write allowance) and US$10/M output. Unknown outcomes retain the full reservation. These accounting bounds assume the verified model prices and enforced text-only call shape; they are not provider billing guarantees. Provider budgets are soft caps and may admit in-flight overshoot, so they supplement the application guard.
 
@@ -60,7 +60,7 @@ Health reports distinguish the configured capacity for the next start from the c
 
 Conversations and results expire after 20 minutes of inactivity. A private City desktop has a maximum 20-minute lease. Container restart clears conversations, City authentication and private evidence. Download an official receipt promptly. A durable ledger retains only hashed submission markers and daily usage counts, so a restart does not authorize blindly retrying an uncertain submission.
 
-`KEEP_AWAKE_UNTIL` now ends at the fixed October 27 launch deadline, replacing the earlier November 1 review window. Cloudflare alarms renew a two-hour idle timeout hourly, without calling the AI or opening City browser sessions. At the deadline the normal two-minute idle timeout resumes automatically; the application remains available on request afterward. No container is forcibly stopped at the deadline. Server failures or deployments may still require a restart. Outside the launch window, the container sleeps after two minutes without requests and may take time to wake. Visible booking polling keeps an active booking session awake. No personal development profile, City cookies or local receipt directory is deployed.
+`KEEP_AWAKE_UNTIL` matches the extended November 3 launch deadline. Cloudflare alarms renew a two-hour idle timeout hourly, without calling the AI or opening City browser sessions. At the deadline the normal two-minute idle timeout resumes automatically; the application remains available on request afterward. No container is forcibly stopped at the deadline. Server failures or deployments may still require a restart. Outside the launch window, the container sleeps after two minutes without requests and may take time to wake. Visible booking polling keeps an active booking session awake. No personal development profile, City cookies or local receipt directory is deployed.
 
 ## Booking boundary
 
