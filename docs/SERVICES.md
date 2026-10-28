@@ -10,6 +10,8 @@ The public browser can use address suggestions and read the assigned voting-plac
 
 Address input is used for the requested lookup. Results depend on the official site's current publication state; missing or unavailable information must be reported explicitly.
 
+After the 2026 election, MyVote was observed redirecting to the City's election information page. In that state the app explains that address-based lookup is unavailable and offers the official election page; it does not treat the redirect as a changed form or manufacture a voting-place card.
+
 Residents can instead supply an intersection. A bounded server lookup matches the two street names against the City's Centreline Intersection Point layer, then selects the closest verified library, civic centre or community recreation centre address returned within 1.5 km. Distances are straight-line estimates. Ambiguous intersections, unavailable City data and missing matching MyVote suggestions require correction or the optional street-address flow; the model cannot invent a substitute address.
 
 Intersection cards display the address used with a Nearby address label and a short assignment limitation. Expanding the address reveals the public facility, intersection, straight-line distance, City source records and a MyVote confirmation link. The assignment belongs to that public address; it does not establish the resident's assignment, even when nearby. Application code binds the lookup type and address to the observed MyVote result before publication.
@@ -21,6 +23,8 @@ Voting cards include an embedded Google Maps venue map and an external map link 
 Official destination: [Toronto recreation activity search](https://anc.ca.apm.activecommunities.com/toronto/activity/search?viewMode=list), the City's Toronto ACTIVE tenant. The City also publishes [drop-in sports information](https://www.toronto.ca/explore-enjoy/parks-recreation/program-activities/sports/drop-in-sports-map/).
 
 The agent can search public activities and inspect actual activity details. Cards use current observed descriptions and availability. Availability is a timestamped observation and can change before checkout. A listed activity, open form or successful HTTP response is not a reservation.
+
+If the drop-in sports map reports maintenance, public discovery switches once to the City's activity catalog. The official Canoe Landing location schedule is also a reviewed public source. An alternative source does not establish proximity, a matching date, eligibility or availability: those still require actual observed evidence. If no match is verified, the app offers another public source or an inline clarification rather than a booking claim.
 
 ## Zero-dollar recreation reservation
 

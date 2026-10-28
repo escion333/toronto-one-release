@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 import { useCityAgent } from "./use-city-agent";
 import { CityResultCard } from "./city-result-card";
 import { ResidentInput } from "./resident-input";
+import { LookupRecovery } from "./lookup-recovery";
+import { lookupFailureFromOutput } from "@/lib/ai/lookup-recovery";
+import { questionFromText, residentQuestion } from "@/lib/ai/resident-question";
 import { RecreationBookingPanel } from "./recreation-booking-panel";
 import { ConversationComposer } from "./conversation-composer";
 import { MessageBubble } from "./message-bubble";
@@ -316,6 +319,75 @@ export function TorontoOneView({
                               />
                             )}
                             {message.parts.map((part, index) => {
+                              const current =
+                                message === activeAssistant &&
+                                agent.messages.at(-1) === message;
+                              const hasInput = message.parts.some(
+                                (item) =>
+                                  (item.type === "tool-requestResidentInput" ||
+                                    item.type === "tool-requestStreetAddress") &&
+                                  item.state === "output-available",
+                              );
+                              const currentInput =
+                                current &&
+                                !message.parts
+                                  .slice(index + 1)
+                                  .some(
+                                    (item) =>
+                                      (item.type === "tool-requestResidentInput" ||
+                                        item.type === "tool-requestStreetAddress") &&
+                                      item.state === "output-available",
+                                  );
+                              if (
+                                part.type === "text" &&
+                                current &&
+                                message.parts.some(
+                                  (item) =>
+                                    (item.type === "tool-requestResidentInput" ||
+                                      item.type === "tool-requestStreetAddress") &&
+                                    item.state === "output-available" &&
+                                    item.output.question.trim() === part.text.trim(),
+                                )
+                              )
+                                return null;
+                              if (
+                                part.type === "text" &&
+                                message.role === "assistant" &&
+                                current &&
+                                !chatProcessing &&
+                                !hasInput &&
+                                !message.parts
+                                  .slice(index + 1)
+                                  .some(
+                                    (next) => next.type === "text" && next.text.trim(),
+                                  )
+                              ) {
+                                const question = questionFromText(part.text);
+                                if (question)
+                                  return (
+                                    <ResidentInput
+                                      key={`${message.id}-${index}`}
+                                      {...question}
+                                      disabled={processing}
+                                      onSubmit={send}
+                                    />
+                                  );
+                              }
+                              if (
+                                "output" in part &&
+                                part.state === "output-available"
+                              ) {
+                                const failure = lookupFailureFromOutput(part.output);
+                                if (failure)
+                                  return (
+                                    <LookupRecovery
+                                      key={index}
+                                      failure={failure}
+                                      disabled={processing || !current}
+                                      onRetry={send}
+                                    />
+                                  );
+                              }
                               if (
                                 part.type === "text" &&
                                 message.parts.some(
@@ -367,10 +439,7 @@ export function TorontoOneView({
                                 part.type === "tool-requestStreetAddress" &&
                                 part.state === "output-available"
                               ) {
-                                const current =
-                                  message === activeAssistant &&
-                                  agent.messages.at(-1) === message;
-                                if (!current)
+                                if (!currentInput)
                                   return (
                                     <MessageBubble
                                       key={part.toolCallId}
@@ -383,7 +452,7 @@ export function TorontoOneView({
                                     key={part.toolCallId}
                                     address
                                     question={part.output.question}
-                                    disabled={!current || processing}
+                                    disabled={!currentInput || processing}
                                     onSubmit={send}
                                   />
                                 );
@@ -392,28 +461,16 @@ export function TorontoOneView({
                                 part.type === "tool-requestResidentInput" &&
                                 part.state === "output-available"
                               ) {
-                                if (part.output.choices?.length)
+                                const question = residentQuestion(part.output);
+                                if (question)
                                   return (
                                     <ResidentInput
                                       key={part.toolCallId}
-                                      question={part.output.question}
-                                      choices={part.output.choices}
-                                      disabled={
-                                        processing || agent.messages.at(-1) !== message
-                                      }
+                                      {...question}
+                                      disabled={processing || !currentInput}
                                       onSubmit={send}
                                     />
                                   );
-                                if (
-                                  message.parts
-                                    .slice(index + 1)
-                                    .some(
-                                      (next) =>
-                                        next.type === "text" &&
-                                        next.text.trim().length > 0,
-                                    )
-                                )
-                                  return null;
                                 return (
                                   <MessageBubble
                                     key={part.toolCallId}

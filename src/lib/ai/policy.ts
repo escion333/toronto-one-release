@@ -5,6 +5,8 @@ export const CITY_ENTRY_POINTS = {
   electionGuide: "https://www.toronto.ca/city-government/elections/",
   recreationGuide:
     "https://www.toronto.ca/explore-enjoy/parks-recreation/program-activities/sports/drop-in-sports-map/",
+  canoeLanding:
+    "https://www.toronto.ca/data/parks/prd/facilities/complex/3643/index.html",
 } as const;
 
 export function approvedPageUrl(value: string): string {
@@ -17,6 +19,9 @@ export function approvedPageUrl(value: string): string {
     (u.hostname === "www.toronto.ca" &&
       (u.pathname.startsWith("/city-government/elections/") ||
         u.pathname.startsWith("/explore-enjoy/parks-recreation/") ||
+        /^\/data\/parks\/prd\/facilities\/complex\/\d+\/index\.html$/.test(
+          u.pathname,
+        ) ||
         /^\/services-payments\/venues-facilities-bookings\/booking-park-recreation-facilities\/(?:online-booking-information-conditions|simple-permit-booking)\/$/.test(
           u.pathname,
         ))) ||

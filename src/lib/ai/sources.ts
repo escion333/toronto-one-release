@@ -102,6 +102,7 @@ export function messageSources(message: CityUIMessage): {
       part.state === "output-available"
     ) {
       const observed = part.output;
+      if (!("id" in observed)) continue;
       checked.push({
         observationId: observed.id,
         url: observed.url,

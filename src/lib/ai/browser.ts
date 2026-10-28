@@ -4,11 +4,13 @@ import { ExecutionTimings } from "./timing.ts";
 import type { VotingLookup } from "./contracts.ts";
 import { normalizeStreet, votingVenue } from "./voting.ts";
 import { tennisBookingUrl } from "./tennis-contracts.ts";
+import { CityLookupError, lookupErrorCode } from "./lookup-recovery.ts";
 import {
   allowedActions,
   addressSuggestionAllowed,
   approvedPageUrl,
   normalizeCityLink,
+  CITY_ENTRY_POINTS,
   type BrowserAction,
   type BrowserControl,
 } from "./policy.ts";
@@ -22,6 +24,7 @@ export type Observation = {
   controls: (BrowserControl & { actions: BrowserAction[] })[];
   voting?: { lookup: VotingLookup; venue?: { name: string; address: string } };
   tennisCourts?: string[];
+  recovery?: { sourceUrl: string; observationId: string; message: string };
 };
 const resourceHosts = new Set([
   "myvote.toronto.ca",
@@ -50,6 +53,16 @@ async function getBrowser() {
   return current;
 }
 export class CityBrowser {
+  private readonly contextFactory: () => Promise<BrowserContext>;
+  constructor(
+    contextFactory: () => Promise<BrowserContext> = async () =>
+      (await getBrowser()).newContext({
+        serviceWorkers: "block",
+        acceptDownloads: false,
+      }),
+  ) {
+    this.contextFactory = contextFactory;
+  }
   timing = new ExecutionTimings();
   private context: BrowserContext | undefined;
   private page: Page | undefined;
@@ -65,12 +78,7 @@ export class CityBrowser {
   }
   private async getPage() {
     if (this.page && !this.page.isClosed()) return this.page;
-    this.context = await this.timing.measure("browser_startup", async () =>
-      (await getBrowser()).newContext({
-        serviceWorkers: "block",
-        acceptDownloads: false,
-      }),
-    );
+    this.context = await this.timing.measure("browser_startup", this.contextFactory);
     await this.context.route("**/*", async (route) => {
       const request = route.request();
       const u = new URL(request.url());
@@ -95,7 +103,7 @@ export class CityBrowser {
         await route.abort();
         return;
       }
-      await route.continue();
+      await route.fallback();
     });
     this.page = await this.context.newPage();
     this.page.setDefaultTimeout(12_000);
@@ -104,10 +112,40 @@ export class CityBrowser {
   }
   async open(url: string): Promise<Observation> {
     this.votingLookup = undefined;
-    const page = await this.getPage();
-    await this.navigate(page, url);
-    await this.settle(page);
-    return this.observe();
+    const observed = await this.readWithRetry(async () => {
+      const page = await this.getPage();
+      await this.navigate(page, url);
+      await this.settle(page);
+      return this.observe();
+    });
+    if (
+      url === CITY_ENTRY_POINTS.recreationGuide &&
+      /(?:map|page|service).{0,60}(?:down for maintenance|unavailable)|currently down for maintenance/i.test(
+        observed.text,
+      )
+    ) {
+      // One fixed, reviewed alternative; never loop through unavailable services.
+      const alternative = await this.open(CITY_ENTRY_POINTS.recreation);
+      alternative.recovery = {
+        sourceUrl: observed.url,
+        observationId: observed.id,
+        message:
+          "The drop-in map reports maintenance. Switched to the City’s activity listings; check actual dates, location and availability before recommending anything.",
+      };
+      return alternative;
+    }
+    return observed;
+  }
+  private async readWithRetry<T>(operation: () => Promise<T>): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      // Only idempotent public navigation/search operations opt in to one retry.
+      // Authentication challenges, policy failures and booking writes never do.
+      if (!["timeout", "temporary"].includes(lookupErrorCode(error))) throw error;
+      await this.close();
+      return operation();
+    }
   }
   async searchTennisCourts(): Promise<Observation> {
     await this.open(tennisBookingUrl);
@@ -123,6 +161,8 @@ export class CityBrowser {
   }
   async lookupVotingPlace(lookup: VotingLookup): Promise<Observation> {
     let observed = await this.open("https://myvote.toronto.ca/home");
+    if (new URL(observed.url).hostname !== "myvote.toronto.ca")
+      throw new CityLookupError("redirected");
     const one = (matches: (control: BrowserControl) => boolean) => {
       const controls = observed.controls.filter(matches);
       const control = controls[0];
@@ -206,11 +246,16 @@ export class CityBrowser {
     } else await this.timing.measure("external_wait", () => page.waitForTimeout(500));
   }
   private async navigate(page: Page, url: string) {
-    await this.timing.measure("navigation", () =>
+    const response = await this.timing.measure("navigation", () =>
       page.goto(approvedPageUrl(url), { waitUntil: "commit" }),
     );
+    if (response && response.status() >= 400)
+      throw new CityLookupError(response.status() >= 500 ? "temporary" : "unavailable");
   }
   async searchRecreation(keyword: string, canoeLanding: boolean) {
+    return this.readWithRetry(() => this.searchRecreationOnce(keyword, canoeLanding));
+  }
+  private async searchRecreationOnce(keyword: string, canoeLanding: boolean) {
     const page = await this.getPage();
     const url = `https://anc.ca.apm.activecommunities.com/toronto/activity/search?${canoeLanding ? "center_ids=1330&" : ""}viewMode=list`;
     // Known public steps run together; the model still selects the search and result.
@@ -280,7 +325,9 @@ export class CityBrowser {
               ancestor && depth < 6;
               depth++, ancestor = ancestor.parentElement
             ) {
-              const candidate = ancestor.innerText.trim();
+              const candidate =
+                ancestor instanceof HTMLElement ? ancestor.innerText.trim() : "";
+              if (!candidate) break;
               if (
                 ancestor.querySelectorAll("a[href]").length !== 1 ||
                 candidate.length > 1200
@@ -331,9 +378,7 @@ export class CityBrowser {
         data.text,
       )
     )
-      throw new Error(
-        "The official service requires human verification. Continue directly on the official site; no challenge was bypassed.",
-      );
+      throw new CityLookupError("human_verification");
     const observation: Observation = {
       id: randomUUID(),
       url,

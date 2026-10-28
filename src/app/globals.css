@@ -2859,6 +2859,10 @@ html[data-keyboard="true"] .suggestions {
   display: grid;
   gap: 0.75rem;
 }
+.inline-input-card input {
+  min-height: 44px;
+  min-width: 0;
+}
 .voting-location-modes {
   display: flex;
   flex-wrap: wrap;

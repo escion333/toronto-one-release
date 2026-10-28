@@ -1,3 +1,5 @@
+import { knownLookupCode, lookupFailure } from "./lookup-recovery.ts";
+
 const requestErrors = {
   context_limit:
     "This conversation is too large for another AI request. Start a new session after saving any receipt. Check Tasks before retrying a reservation.",
@@ -41,6 +43,28 @@ export function aiFailureCode(error: unknown): string {
 
 export function publicAIError(error: unknown): string {
   const code = aiFailureCode(error);
+  // The SDK can wrap tool exceptions. Classify their fixed public reason without
+  // revealing the wrapper, raw page data, provider body or arbitrary cause text.
+  let cause = error;
+  for (let depth = 0; depth < 6; depth++) {
+    const lookupCode = knownLookupCode(cause);
+    if (lookupCode)
+      return lookupFailure(
+        lookupCode === "redirected" ? "voting" : "public",
+        lookupCode,
+      ).message;
+    if (
+      cause instanceof Error &&
+      /Every result fact must be an exact excerpt|Observe a fresh official page|observation is stale|Page changed|strict mode violation|locator\.(click|fill)|Timeout.*exceeded/.test(
+        cause.message,
+      )
+    ) {
+      error = cause;
+      break;
+    }
+    if (typeof cause !== "object" || cause === null || !("cause" in cause)) break;
+    cause = cause.cause;
+  }
   if (Object.hasOwn(requestErrors, code)) {
     // Narrow against the fixed allowlist; never return arbitrary error messages.
     for (const [key, message] of Object.entries(requestErrors))

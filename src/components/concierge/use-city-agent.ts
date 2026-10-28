@@ -12,6 +12,8 @@ import {
 import { z } from "zod";
 import { bookingMascotState } from "@/lib/ai/booking-contracts";
 import { useRecreationBooking } from "./use-recreation-booking";
+import { questionFromText } from "@/lib/ai/resident-question";
+import { lookupFailureFromOutput } from "@/lib/ai/lookup-recovery";
 
 const transport = new DefaultChatTransport<CityUIMessage>({
   api: appPath("/api/chat"),
@@ -103,16 +105,26 @@ export function useCityAgent() {
     focused,
     toolRunning: toolParts.some((p) => p.state === "input-available"),
     needsInput:
-      ["tool-requestResidentInput", "tool-requestStreetAddress"].includes(
+      (["tool-requestResidentInput", "tool-requestStreetAddress"].includes(
         lastTool?.type ?? "",
-      ) && lastTool?.state === "output-available",
+      ) &&
+        lastTool?.state === "output-available") ||
+      Boolean(
+        latest?.parts.some(
+          (part) => part.type === "text" && questionFromText(part.text),
+        ),
+      ),
     hasResult: toolParts.some(
       (p) => p.type === "tool-publishResult" && p.state === "output-available",
     ),
     toolFailed: Boolean(
       localError ||
       stopped ||
-      (toolParts.some((part) => part.state === "output-error") &&
+      (toolParts.some(
+        (part) =>
+          part.state === "output-error" ||
+          (part.state === "output-available" && lookupFailureFromOutput(part.output)),
+      ) &&
         !toolParts.some(
           (part) =>
             part.type === "tool-publishResult" && part.state === "output-available",

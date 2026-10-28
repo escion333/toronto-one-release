@@ -9,12 +9,14 @@ export function ResidentInput({
   address = false,
   question,
   choices,
+  inputType = "text",
   disabled,
   onSubmit,
 }: {
   address?: boolean;
   question: string;
   choices?: string[];
+  inputType?: "text" | "number" | "date";
   disabled: boolean;
   onSubmit: (text: string) => void;
 }) {
@@ -32,7 +34,7 @@ export function ResidentInput({
     );
   return (
     <div className="inline-input-card">
-      <p className="inline-input-title">
+      <p className="inline-input-title" id={`${locationId}-question`}>
         {address && <MapPin size={18} aria-hidden="true" />}
         {question}
       </p>
@@ -103,21 +105,53 @@ export function ResidentInput({
           </Button>
         </form>
       ) : (
-        <div className="inline-choice-options">
-          {choices?.map((choice) => (
-            <Button
-              variant="outline"
-              key={choice}
-              disabled={disabled}
-              onClick={() => {
-                onSubmit(choice);
-                setSent(true);
-              }}
-            >
-              {choice}
-            </Button>
-          ))}
-        </div>
+        <form
+          aria-labelledby={`${locationId}-question`}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!disabled && value.trim()) {
+              onSubmit(value.trim());
+              setSent(true);
+            }
+          }}
+        >
+          <div className="inline-choice-options">
+            {choices?.map((choice) => (
+              <Button
+                type="button"
+                variant="outline"
+                key={choice}
+                disabled={disabled}
+                onClick={() => {
+                  onSubmit(choice);
+                  setSent(true);
+                }}
+              >
+                {choice}
+              </Button>
+            ))}
+          </div>
+          <label className="sr-only" htmlFor={locationId}>
+            {question}
+          </label>
+          <Input
+            id={locationId}
+            type={inputType}
+            inputMode={inputType === "number" ? "numeric" : "text"}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder={choices?.length ? "Or enter your own answer" : "Your answer"}
+            autoComplete="off"
+            maxLength={400}
+            min={inputType === "number" ? 0 : undefined}
+            step={inputType === "number" ? 1 : undefined}
+            required
+            disabled={disabled}
+          />
+          <Button type="submit" disabled={disabled || !value.trim()}>
+            Continue
+          </Button>
+        </form>
       )}
     </div>
   );

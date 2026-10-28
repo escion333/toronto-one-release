@@ -9,6 +9,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import type { CityUIMessage } from "@/lib/ai/agent";
+import { lookupFailureFromOutput } from "@/lib/ai/lookup-recovery";
 
 const labels: Record<string, string> = {
   browserOpen: "Open City service",
@@ -60,7 +61,23 @@ export function AgentActivity({
     parts.some(
       (part) => part.state !== "output-available" && part.state !== "output-error",
     );
-  const failed = parts.some((part) => part.state === "output-error");
+  const failed = parts.some(
+    (part) =>
+      part.state === "output-error" ||
+      (part.state === "output-available" && lookupFailureFromOutput(part.output)),
+  );
+  const lastFailure = parts.findLastIndex((part) => part.state === "output-error");
+  const failedPart = parts.at(lastFailure);
+  const recovered =
+    lastFailure >= 0 &&
+    failedPart !== undefined &&
+    browserTools.has(getToolName(failedPart)) &&
+    parts
+      .slice(lastFailure + 1)
+      .some(
+        (part) =>
+          part.type === "tool-publishResult" && part.state === "output-available",
+      );
   const incomplete = parts.some(
     (part) => part.state !== "output-available" && part.state !== "output-error",
   );
@@ -70,7 +87,7 @@ export function AgentActivity({
       <summary>
         {active ? (
           <LoaderCircle className="activity-spinner" size={15} aria-hidden="true" />
-        ) : failed ? (
+        ) : failed && !recovered ? (
           <CircleAlert size={15} aria-hidden="true" />
         ) : incomplete ? (
           <CircleDashed size={15} aria-hidden="true" />
@@ -84,11 +101,13 @@ export function AgentActivity({
                 ? "Checking City sources…"
                 : "Working…"
               : "Thinking…"
-            : failed
-              ? "A step needs attention"
-              : incomplete
-                ? "Check incomplete"
-                : "Activity"}
+            : recovered
+              ? "Lookup recovered"
+              : failed
+                ? "A step needs attention"
+                : incomplete
+                  ? "Check incomplete"
+                  : "Activity"}
         </span>
         <ChevronDown className="activity-chevron" size={14} aria-hidden="true" />
       </summary>

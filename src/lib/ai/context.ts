@@ -40,7 +40,9 @@ export function cityModelMessages(messages: ModelMessage[]): ModelMessage[] {
         };
         for (const [key, value] of Object.entries(part.output.value))
           if (
-            ["id", "url", "title", "checkedAt"].includes(key) &&
+            ["id", "url", "title", "checkedAt", "status", "code", "service"].includes(
+              key,
+            ) &&
             typeof value === "string"
           )
             summary[key] = value;

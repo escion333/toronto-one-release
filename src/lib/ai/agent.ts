@@ -1,6 +1,7 @@
 import {
   ToolLoopAgent,
   isStepCount,
+  hasToolCall,
   tool,
   gateway,
   wrapLanguageModel,
@@ -22,6 +23,12 @@ import { createSpendMiddleware } from "./spend.ts";
 import { cityModelMessages } from "./context.ts";
 import { tennisBookingUrl } from "./tennis-contracts.ts";
 import { recreationCapabilities } from "./recreation-capabilities.ts";
+import {
+  lookupErrorCode,
+  lookupFailure,
+  type LookupService,
+} from "./lookup-recovery.ts";
+import { residentQuestion, residentQuestionSchema } from "./resident-question.ts";
 
 export function configuredModel() {
   return process.env.AI_GATEWAY_MODEL?.trim() || "openai/gpt-6.1-sol";
@@ -32,7 +39,18 @@ export function gatewayConfigured() {
   );
 }
 export function createCityAgent(session: AgentSession) {
-  const run = <T>(fn: () => Promise<T>) => session.browser.run(fn);
+  const run = async <T>(fn: () => Promise<T>, service: LookupService = "public") => {
+    try {
+      return await session.browser.run(fn);
+    } catch (error) {
+      const code = lookupErrorCode(error);
+      // Fixed diagnostic metadata only; no resident text, URLs or page content.
+      console.warn(
+        JSON.stringify({ event: "city_public_lookup_error", service, code }),
+      );
+      return lookupFailure(service, code);
+    }
+  };
   let modelStart = 0;
   return new ToolLoopAgent({
     model: wrapLanguageModel({
@@ -49,7 +67,10 @@ export function createCityAgent(session: AgentSession) {
     },
     prepareCall: (options) => ({ ...options, onError: () => undefined }),
     prepareStep: ({ messages }) => ({ messages: cityModelMessages(messages) }),
-    stopWhen: isStepCount(18),
+    stopWhen: [
+      isStepCount(18),
+      hasToolCall("requestResidentInput", "requestStreetAddress"),
+    ],
     instructions: `You are Toronto One, an independent, warm, capable raccoon concierge for CITY OF TORONTO municipal services only. Today in Toronto is ${new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", dateStyle: "full" }).format(new Date())}.
 CONVERSATION STYLE: Sound like a helpful neighbour in a text conversation. Use one short sentence by default; for example, "What days work for you?" Ask one short question at a time. Skip greetings, praise, preambles and repeated explanations. Let result cards hold service facts and links, and let the source disclosure hold quotations. Do not repeat source excerpts in the chat text unless the resident asks for the exact wording. Mention fees, consent, uncertainty and blockers when they affect the current decision; never omit a consequential warning to be brief. Do not repeat card details or narrate browser clicks.
 PROJECT QUESTIONS: Questions about Toronto One and its creator are also in scope. Approved creator bio, adapted from https://www.tomsanee.com/: Tom Sanee is a Toronto-based senior product designer working across research, design and code, with more than seven years helping small teams make complex products easier to understand and use. He created Toronto One. When asked who made this project, answer in one short sentence, for example: "Tom Sanee, a Toronto-based senior product designer working across research, design and code, created Toronto One." Use the approved bio directly without browser tools or citeSource. Mention more detail or the portfolio URL only if asked. Do not volunteer the bio during City service requests, invent personal details or project motivations, or imply City affiliation.
@@ -66,7 +87,8 @@ RECREATION COVERAGE: Use recreationServiceGuide for official guidance across act
 TENNIS COURTS: Use searchTennisCourts for current courts and booking reminders. Court names are official observed resources; public listings do not prove availability. Sign-in is required to see accurate times. Do not invent nearby distances, open slots or a zero-dollar fee; show observed charges and seasonal rules, and explain conflicting published guidance instead of guessing. For a selected court publishResult kind facility with facilityName exactly matching a returned tennisCourts name, then use prepareTennisReservation only when the resident asks to reserve. The application asks for date, one-hour time, group size and maximum total (default $0); never infer a higher budget. The resident controls City participant selection, legal approvals, signatures and payment. The application reviews the exact City cart before checkout handoff and confirms only after matching an official permit and City account evidence. Unknown outcomes require reconciliation, never a fresh payment. Other court durations and organization bookings require direct City assistance.
 BROWSER CONTEXT: Older raw page observations are removed from model working context. Re-open or observe the relevant page when you need its exact evidence again; do not reconstruct missing quotes or control references from memory.
 BOOKING: Use the private City adapter for authenticated recreation booking. When a resident asks to book a selected activity, publish its source result then call prepareRecreationBooking with the result ID. It opens the legitimate City interface in a temporary City browser inside the conversation; the resident signs in directly. The application selects only the resident-chosen participant, prepares known steps and shows an exact zero-dollar checkout preview for explicit final approval. The model cannot grant approval, submit checkout, accept waivers, access credentials or assert success. Point to the booking panel in the conversation; the same progress is also available in Tasks. Never promise a held or booked spot without application-verified official receipt AND matching account evidence. A nonzero total or unknown form requires resident attention; never silently fall back to a link. For simple discovery publish one best matching card, not redundant duplicate cards.
-When you need resident information or a decision, use requestResidentInput with a few short choices when that helps, then render the appropriate inline control. Never ask for credentials or legal acceptance with a conversational input tool. Use requestResidentInput then ask one concise question. If a tool fails, explain the failure honestly; try a safe alternative or ask for correction. A missing address suggestion can still be loading: observe again before choosing Go; disabled controls are not offered. Never fabricate a fallback answer. Keep progress concise; don't narrate every click. Write plain text without Markdown formatting.`,
+INLINE QUESTIONS: Every clarification must use requestResidentInput (or requestStreetAddress for voting). Use inputType number for age, text for neighbourhood/activity/time preferences, date for a specific date. Supply 2–5 short choices where useful; a free answer remains available. Ask one question at a time and end the turn after the input tool. Do not repeat its question in plain text. Never collect credentials, payment, legal acceptance or checkout approval with these tools.
+RECOVERY: Public lookup failures return status lookup_unavailable with application-authored reasons and official alternatives. Explain that specific reason without guessing a different cause. MyVote can redirect after the election; never call that a changed form or publish a voting place from the election guide. The drop-in map may automatically switch to actual City activity listings; use recreationSearch on that alternative, inspect current detail pages and only publish a matching activity. A fallback listing is not proof of a spot. If a centre schedule is more useful, follow its reviewed official link and cite its actual schedule, distinguishing walk-in from reservable activities. Refresh stale controls once; never loop on a failed source, repeat a human-verification challenge or retry any booking write. When no verified match is found, offer a concrete alternative or ask which constraint the resident wants to change through requestResidentInput. Never fabricate a fallback answer. Keep progress concise; don't narrate every click. Write plain text without Markdown formatting.`,
     tools: {
       recreationServiceGuide: tool({
         description:
@@ -160,13 +182,22 @@ When you need resident information or a decision, use requestResidentInput with 
             ),
         }),
         execute: ({ keyword, canoeLanding }) =>
-          run(() => session.browser.searchRecreation(keyword, canoeLanding)),
+          run(
+            () => session.browser.searchRecreation(keyword, canoeLanding),
+            "recreation",
+          ),
       }),
       browserOpen: tool({
         description:
           "Open a reviewed public Toronto election/recreation page in this session's isolated browser. Returns actual page text and allowed controls. No arbitrary domains or private records.",
         inputSchema: z.object({ url: z.string().url() }),
-        execute: ({ url }) => run(() => session.browser.open(url)),
+        execute: ({ url }) =>
+          run(
+            () => session.browser.open(url),
+            /myvote\.toronto\.ca|\/city-government\/elections\//.test(url)
+              ? "voting"
+              : "recreation",
+          ),
       }),
       browserObserve: tool({
         description:
@@ -209,20 +240,20 @@ When you need resident information or a decision, use requestResidentInput with 
                 ? await resolveVotingIntersection(location)
                 : { type: "address" as const, address: location };
             return session.browser.lookupVotingPlace(lookup);
-          }),
+          }, "voting"),
       }),
       requestResidentInput: tool({
         description:
-          "Mark that a resident detail or choice is needed. Does not grant consent or change task truth.",
-        inputSchema: z.object({
-          question: z.string().min(3).max(400),
-          choices: z.array(z.string().min(1).max(90)).min(2).max(5).optional(),
-        }),
-        execute: ({ question, choices }) => ({
-          status: "needs_input" as const,
-          question,
-          choices,
-        }),
+          "Show an inline answer form for every clarification. Choose text, number or date; optional short choices appear alongside a free answer. End the turn after calling. Never collect credentials, legal acceptance, payment or booking approval.",
+        inputSchema: residentQuestionSchema,
+        execute: (input) => {
+          const question = residentQuestion(input);
+          if (!question)
+            throw new Error(
+              "Use the private City booking panel for credentials and legal approvals.",
+            );
+          return { status: "needs_input" as const, ...question };
+        },
       }),
       citeSource: tool({
         description:
