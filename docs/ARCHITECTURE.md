@@ -8,6 +8,8 @@ Toronto One is a Next.js App Router application with one AI model and two City o
 
 The landing has scoped light-only styles and responsive static WebP assets in `public/landing`, including a transparent render of the original native-groom mascot. It loads no Three.js renderer and performs no service lookup or transaction. The concierge keeps its existing theme preferences, seven-state `AgentMascot` boundary and server-side service policies.
 
+The landing and route metadata feature recreation. The basketball and guided activity starters send ordinary resident discovery requests through the existing chat route; inline questions gather preferences before live public discovery. They grant no new navigation or booking authority. Voting remains available on explicit request, with its existing post-election failure handling, but has no featured starter or landing highlight.
+
 ## Request flow
 
 Launch admission is clock-based and shared by the Worker and server. The Worker applies a bounded, salted per-IP burst guard; the server claims visit ownership before waiting in a FIFO execution queue. The SSE response and visit cookie start while waiting, with keep-alive comments and cancellation support. Queued work consumes no model turn or browser context. Public City contexts close after each run; conversation, results and validated source excerpts remain isolated per visit. Private booking browsers retain their existing ownership and approval boundaries.

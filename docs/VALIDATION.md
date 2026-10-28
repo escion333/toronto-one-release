@@ -16,6 +16,16 @@ Chat-source tests additionally cover exact excerpt validation, stale/missing obs
 
 Voting tests cover intersection parsing, ambiguous and divided-street crossings, verified public-facility selection, distance bounds, missing City data, library-name fallback, browser-bound example labels, immutable earlier results and venue-only map queries. Retained messages with missing or duplicate IDs are repaired to stable distinct IDs, and new assistant streams generate IDs explicitly.
 
+## Recreation-first entry (October 28)
+
+The landing, welcome copy and route descriptions feature recreation. Only Recreation is highlighted in the 60-service vision field; Voting remains an ordinary label and an on-request service. The welcome starters are **Find basketball near me**, **Help me choose an activity** and the existing tennis planning request. The model's scope guidance follows that emphasis without changing navigation or booking authority.
+
+The updated `node scripts/verify-demo-ui.mts` checks the landing copy and metadata, the single Recreation highlight, both new starter requests, keyboard activation and 44px targets, alongside the existing question/recovery fixtures. These owned fixtures make no model or City requests. All checks passed at 390px and 1440px in both themes with reduced motion, no horizontal overflow and no browser page errors. The mobile landing/service field and dark desktop welcome screenshots were reviewed.
+
+`TORONTO_ONE_TEST_WORKFLOWS=basketball-starter,guided-starter node scripts/verify-demo-live.mts --live` passed both actual welcome-button paths before deployment. The real model collected neighbourhood, age and day through inline questions; the guided path also offered activity choices and a custom answer. Both paths read the actual City catalog and published a sourced basketball detail card from `/toronto/activity/search/detail/195141`, with its displayed availability and relevant fee/enrollment limitations. Cards survived refresh, neither path invoked voting or booking preparation, and no unhandled tool/browser errors occurred. Test sessions were cleared. No City sign-in, declaration, payment or reservation was performed.
+
+Local strict TypeScript, ESLint and all 102 automated tests passed. Remote checks and deployment remain pending for this entry-point refresh.
+
 ## Demo questions and public lookup recovery (October 28)
 
 `node scripts/verify-demo-ui.mts` checks inline text/number/date questions, choice/custom answers, native keyboard submission, the ordinary-question fallback and redirect recovery against owned message fixtures in the real local app. It covers 390px and 1440px in light/dark appearance with reduced motion, overflow, input target size and browser errors. Screenshots remain under ignored `.local/validation`; these fixtures make no model or City requests.

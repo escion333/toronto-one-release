@@ -82,6 +82,90 @@ try {
           });
         } else await route.abort();
       });
+      await page.goto(base);
+      await page
+        .getByText("Find your next activity in Toronto.", { exact: true })
+        .waitFor();
+      assert.match(
+        (await page.locator('meta[name="description"]').getAttribute("content")) ?? "",
+        /recreation/i,
+      );
+      assert.doesNotMatch(
+        (await page.locator('meta[name="description"]').getAttribute("content")) ?? "",
+        /voting/i,
+      );
+      assert.equal(await page.locator('span[class*="serviceItem"]').count(), 60);
+      const highlighted = page.locator('span[class*="serviceActive"]');
+      assert.equal(await highlighted.count(), 1);
+      assert.match((await highlighted.textContent()) ?? "", /Recreation/);
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+        false,
+      );
+      await page.evaluate(() => document.fonts.ready);
+      await page.screenshot({
+        path: resolve(output, `${width}-${theme}-recreation-landing.png`),
+        fullPage: true,
+      });
+      await page.locator("#services").scrollIntoViewIfNeeded();
+      assert.ok(await highlighted.isVisible());
+      await page
+        .getByText(/Explore City recreation programs, check the details/)
+        .waitFor();
+      await page.screenshot({
+        path: resolve(output, `${width}-${theme}-recreation-services.png`),
+        fullPage: true,
+      });
+      await page
+        .getByRole("link", { name: "Start chat", exact: true })
+        .first()
+        .press("Enter");
+      await page
+        .getByRole("heading", { name: "Hey, neighbour.", exact: true })
+        .waitFor();
+      assert.equal(
+        await page
+          .getByRole("button", { name: "Where do I vote?", exact: true })
+          .count(),
+        0,
+      );
+      await page
+        .getByRole("button", { name: "Reserve a tennis court", exact: true })
+        .waitFor();
+      for (const starter of [
+        { title: "Find basketball near me", request: /City of Toronto basketball/ },
+        {
+          title: "Help me choose an activity",
+          request: /choose a City of Toronto recreation activity/,
+        },
+      ]) {
+        const button = page.getByRole("button", { name: starter.title, exact: true });
+        const box = await button.boundingBox();
+        assert.ok(box && box.height >= 44);
+        await button.focus();
+        assert.equal(
+          await button.evaluate((el) => el === document.activeElement),
+          true,
+        );
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+          false,
+        );
+        await page.screenshot({
+          path: resolve(output, `${width}-${theme}-recreation-welcome.png`),
+          fullPage: true,
+        });
+        await button.press("Enter");
+        await page
+          .getByText("Controlled fixture answer received.", { exact: true })
+          .waitFor();
+        assert.match(submitted, starter.request);
+        assert.match(submitted, /Do not book anything\./);
+        await page.goto(base + "/chat");
+        await page
+          .getByRole("heading", { name: "Hey, neighbour.", exact: true })
+          .waitFor();
+      }
       async function load(parts: unknown[], selector = ".inline-input-card") {
         messages = [{ id: "fixture-assistant", role: "assistant", parts }];
         await page.goto(base + "/chat");

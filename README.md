@@ -2,7 +2,7 @@
 
 [Open Toronto One](https://www.tomsanee.com/toronto-one)
 
-An AI concierge for City of Toronto voting information and recreation reservations. Residents converse with a raccoon companion, see real tool progress and receive results linked to official sources. Toronto One is independent from the City of Toronto.
+An AI concierge for City of Toronto recreation discovery and booking assistance. Residents converse with a raccoon companion, see real tool progress and receive results linked to official sources. Toronto One is independent from the City of Toronto.
 
 The application uses Next.js, React, shadcn/ui, AI SDK 7, Vercel AI Gateway and Playwright. The default model is configurable GPT-6.1 Sol. It has no simulated chatbot or booking fallback.
 
@@ -10,8 +10,9 @@ The integrated light-only landing page uses [www.tomsanee.com/toronto-one](https
 
 ## Capabilities
 
-- **Voting:** municipal voting-place information from MyVote using a street address, or a nearby public example address selected from City data for an intersection. Example results clearly distinguish the public address from the resident's assignment. Voting cards include a Google Maps venue widget. It does not determine eligibility or check voter registration.
 - **Recreation:** live activity discovery, official guidance across recreation service families, a reviewed zero-dollar activity enrollment adapter, and a tennis court reservation preview. Tennis requests use the City’s dedicated court schedule, a resident-selected maximum total (default $0), private City checkout and matching official permit/account evidence. Residents select their City participant and slot, personally handle declarations, signatures and payment, and return for verification. The signed-in tennis flow has been verified through the unpaid payment screen; completed permit verification remains unverified. See [validation](docs/VALIDATION.md).
+- **Featured starters:** basketball discovery and a guided activity choice ask one inline question at a time before checking current City listings. They do not prepare a booking. Tennis planning remains a separate starter. The landing highlights recreation while retaining the wider City-service vision.
+- **Voting, on request:** municipal voting-place information remains subject to MyVote's current publication state. After the 2026 election, MyVote redirected to the City's election guide; the app explains that lookup is unavailable and offers official information. When MyVote publishes assignments, a supplied street address or a nearby public example address selected from City data can produce a sourced venue card. Example results clearly distinguish the public address from the resident's assignment. The app does not determine eligibility or check voter registration.
 - **Tasks:** sourced findings and verified booking receipts within a temporary local session.
 - **Companion:** seven animation states driven by actual agent activity, using transparent frames rendered from a Blender character, with reduced-motion and static fallbacks.
 
@@ -40,7 +41,7 @@ The selected model requires valid Vercel AI Gateway credentials and account acce
 corepack pnpm@10.34.8 dev --hostname 127.0.0.1 --port 3000
 ```
 
-Open [Toronto One](http://127.0.0.1:3000) and choose **Start chat**, or open the [concierge directly](http://127.0.0.1:3000/chat). Ask where to vote or request a recreation activity. For booking, use the separate City browser window for authentication and legal declarations. Review the participant, session and amount before approving a real reservation. A zero-dollar online reservation can still have a disclosed check-in fee.
+Open [Toronto One](http://127.0.0.1:3000) and choose **Start chat**, or open the [concierge directly](http://127.0.0.1:3000/chat). Choose **Find basketball near me** or **Help me choose an activity** to try recreation discovery. For booking, use the separate City browser window for authentication and legal declarations. Review the participant, session and amount before approving a real reservation. A zero-dollar online reservation can still have a disclosed check-in fee.
 
 ## Privacy and execution
 

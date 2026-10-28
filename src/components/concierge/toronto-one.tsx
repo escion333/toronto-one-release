@@ -6,12 +6,13 @@ import {
   CircleHelp,
   ClipboardList,
   MessageCircle,
+  MapPin,
   Moon,
   Settings2,
   RotateCcw,
   Sun,
+  Sparkles,
   Trash2,
-  Vote,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { AgentMascot } from "@/components/agent/agent-mascot";
@@ -49,16 +50,16 @@ const navigation = [
 ] as const;
 const suggestions = [
   {
-    title: "Where do I vote?",
+    title: "Find basketball near me",
     request:
-      "Help me find my Toronto municipal election voting place. What do you need from me?",
-    icon: Vote,
+      "Help me find City of Toronto basketball near me. Ask my neighbourhood, the player’s age and preferred day one question at a time. Show a matching City activity with its current details and displayed availability. Do not book anything.",
+    icon: MapPin,
   },
   {
-    title: "Find recreation activities",
+    title: "Help me choose an activity",
     request:
-      "Help me find City of Toronto recreation activities. Ask me what I’d like to play, where and when. Do not book anything.",
-    icon: CalendarDays,
+      "Help me choose a City of Toronto recreation activity. Start by asking what I’d like to do, with a few choices and room for my own answer. Then ask my neighbourhood, the participant’s age and preferred day one question at a time. Show a matching City activity with its current details and displayed availability. Do not book anything.",
+    icon: Sparkles,
   },
   {
     title: "Reserve a tennis court",
@@ -264,7 +265,7 @@ export function TorontoOneView({
                     >
                       <h1 id="welcome-heading">Hey, neighbour.</h1>
                       <p className="welcome-description">
-                        City services, one message away.
+                        Find your next activity in Toronto.
                       </p>
                       <div className="suggestions">
                         <div>

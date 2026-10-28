@@ -34,7 +34,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Toronto One — Get city life done.",
   description:
-    "Your Toronto companion. Find real voting information and recreation, with help preparing City bookings.",
+    "Your Toronto companion. Explore City recreation programs, check current details and get help planning your next activity.",
   robots: { index: false, follow: false },
   icons: {
     icon: {

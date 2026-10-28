@@ -50,13 +50,24 @@ async function send(page: Page, text: string) {
 const runtime = await chromium.launch({ headless: true });
 try {
   const workflows = process.env.TORONTO_ONE_TEST_WORKFLOWS?.split(",") ?? [
+    "basketball-starter",
+    "guided-starter",
     "voting",
     "recreation",
     "map-recovery",
     "tennis",
   ];
   for (const workflow of workflows) {
-    assert.ok(["voting", "recreation", "map-recovery", "tennis"].includes(workflow));
+    assert.ok(
+      [
+        "basketball-starter",
+        "guided-starter",
+        "voting",
+        "recreation",
+        "map-recovery",
+        "tennis",
+      ].includes(workflow),
+    );
     console.log(JSON.stringify({ workflow, status: "started" }));
     const context = await runtime.newContext({
       viewport: { width: 1280, height: 900 },
@@ -72,8 +83,9 @@ try {
         .getByRole("textbox", { name: "Message Toronto One", exact: true })
         .waitFor();
       if (workflow === "voting") {
-        await finished(page, () =>
-          page.getByRole("button", { name: /Where do I vote/ }).click(),
+        await send(
+          page,
+          "Help me find my Toronto municipal election voting place. What do you need from me?",
         );
         await page
           .getByPlaceholder("Queen St & Bay St")
@@ -107,6 +119,87 @@ try {
           0,
           "No fabricated post-election assignment",
         );
+      } else if (workflow === "basketball-starter" || workflow === "guided-starter") {
+        const guided = workflow === "guided-starter";
+        await finished(page, () =>
+          page
+            .getByRole("button", {
+              name: guided ? "Help me choose an activity" : "Find basketball near me",
+              exact: true,
+            })
+            .click(),
+        );
+        const answered = new Set<string>();
+        for (let step = 0; step < (guided ? 4 : 3); step++) {
+          const card = page.locator(".inline-input-card").last();
+          await card.waitFor();
+          const question =
+            (await card.locator(".inline-input-title").textContent()) ?? "";
+          const input = card.locator("input");
+          let answer: string;
+          if (/\bage\b|how old/i.test(question)) {
+            answer = "32";
+            answered.add("age");
+            assert.equal(await input.getAttribute("type"), "number");
+          } else if (
+            /neighbou?r|where|area|location|centre|intersection/i.test(question)
+          ) {
+            answer = "King and Spadina; Canoe Landing works too";
+            answered.add("location");
+          } else if (/\bday\b|\bdate\b|when/i.test(question)) {
+            const nextWeek = new Date(`${torontoDate()}T12:00:00Z`);
+            nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
+            answer =
+              (await input.getAttribute("type")) === "date"
+                ? nextWeek.toISOString().slice(0, 10)
+                : "Next week; a listed session is useful even if full or not yet open";
+            answered.add("day");
+          } else {
+            assert.ok(guided && step === 0, `Unexpected question: ${question}`);
+            assert.ok(
+              (await card.getByRole("button").count()) >= 3,
+              "Guided choice buttons plus Continue",
+            );
+            answer = "Basketball";
+            answered.add("activity");
+          }
+          const choice = card.getByRole("button", { name: answer, exact: true });
+          if ((await choice.count()) > 0) {
+            await finished(page, () => choice.click());
+          } else {
+            await input.fill(answer);
+            await finished(page, () => input.press("Enter"));
+          }
+        }
+        assert.deepEqual(
+          [...answered].sort(),
+          (guided
+            ? ["activity", "age", "day", "location"]
+            : ["age", "day", "location"]
+          ).sort(),
+        );
+        await page.locator(".city-result-card").first().waitFor();
+        const state = await snapshot(page);
+        assert.ok(
+          state.results.some(
+            (result) =>
+              result.kind === "recreation" &&
+              /basketball/i.test(result.facts.map((fact) => fact.quote).join(" ")),
+          ),
+        );
+        assert.ok(
+          !state.messages.some((message) =>
+            message.parts.some((part) =>
+              /tool-(?:prepareRecreationBooking|prepareTennisReservation|lookupVotingPlace)/.test(
+                String(part.type),
+              ),
+            ),
+          ),
+        );
+        const count = state.results.length;
+        await page.reload();
+        await page.locator(".city-result-card").first().waitFor();
+        assert.equal((await snapshot(page)).results.length, count);
       } else if (workflow === "recreation") {
         await send(
           page,

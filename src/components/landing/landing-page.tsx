@@ -6,66 +6,66 @@ import { appPath } from "@/lib/app-path";
 import styles from "./landing-page.module.css";
 
 const services = [
-  { emoji: "✅", label: "Voting", implemented: true },
-  { emoji: "✅", label: "Recreation", implemented: true },
-  { emoji: "🏗️", label: "Building permits", implemented: false },
-  { emoji: "🚛", label: "Waste collection", implemented: false },
-  { emoji: "💧", label: "Water bills", implemented: false },
-  { emoji: "🧸", label: "Child care", implemented: false },
-  { emoji: "🐾", label: "Animal services", implemented: false },
-  { emoji: "🅿️", label: "Parking permits", implemented: false },
-  { emoji: "🩺", label: "Public health", implemented: false },
-  { emoji: "🌱", label: "Tree planting", implemented: false },
-  { emoji: "🏠", label: "Housing support", implemented: false },
-  { emoji: "🚧", label: "Road repairs", implemented: false },
-  { emoji: "🗺️", label: "City planning", implemented: false },
-  { emoji: "🐕", label: "Pet licences", implemented: false },
-  { emoji: "🎨", label: "Public art", implemented: false },
-  { emoji: "🏡", label: "Property taxes", implemented: false },
-  { emoji: "⛴️", label: "Island ferries", implemented: false },
-  { emoji: "🔇", label: "Noise complaints", implemented: false },
-  { emoji: "🏘️", label: "Community centres", implemented: false },
-  { emoji: "🏪", label: "Business licences", implemented: false },
-  { emoji: "🏊", label: "Swimming", implemented: false },
-  { emoji: "❄️", label: "Snow clearing", implemented: false },
-  { emoji: "💍", label: "Marriage licences", implemented: false },
-  { emoji: "♻️", label: "Recycling", implemented: false },
-  { emoji: "🌳", label: "Street trees", implemented: false },
-  { emoji: "🏕️", label: "Summer camps", implemented: false },
-  { emoji: "🎫", label: "Parking tickets", implemented: false },
-  { emoji: "🖌️", label: "Arts grants", implemented: false },
-  { emoji: "🚰", label: "Water quality", implemented: false },
-  { emoji: "🧓", label: "Senior services", implemented: false },
-  { emoji: "🚲", label: "Bike lanes", implemented: false },
-  { emoji: "🏢", label: "Affordable housing", implemented: false },
-  { emoji: "🥗", label: "Food safety", implemented: false },
-  { emoji: "⛸️", label: "Skating", implemented: false },
-  { emoji: "🍃", label: "Green bins", implemented: false },
-  { emoji: "🌻", label: "Community gardens", implemented: false },
-  { emoji: "💼", label: "Employment support", implemented: false },
-  { emoji: "🏛️", label: "Historic sites", implemented: false },
-  { emoji: "📅", label: "Facility bookings", implemented: false },
-  { emoji: "🐈", label: "Animal adoption", implemented: false },
-  { emoji: "💡", label: "Street lighting", implemented: false },
-  { emoji: "💬", label: "Public consultations", implemented: false },
-  { emoji: "💉", label: "Health clinics", implemented: false },
-  { emoji: "📐", label: "Development plans", implemented: false },
-  { emoji: "🏖️", label: "Beaches", implemented: false },
-  { emoji: "⚽", label: "Sports fields", implemented: false },
-  { emoji: "⚖️", label: "Bylaw enforcement", implemented: false },
-  { emoji: "🌊", label: "Flood prevention", implemented: false },
-  { emoji: "♿", label: "Accessibility", implemented: false },
-  { emoji: "🛏️", label: "Shelter services", implemented: false },
-  { emoji: "🎒", label: "After-school care", implemented: false },
-  { emoji: "🎪", label: "Event permits", implemented: false },
-  { emoji: "🧽", label: "Graffiti removal", implemented: false },
-  { emoji: "🏋️", label: "Fitness classes", implemented: false },
-  { emoji: "🕳️", label: "Potholes", implemented: false },
-  { emoji: "🗑️", label: "Waste depots", implemented: false },
-  { emoji: "🧱", label: "Heritage buildings", implemented: false },
-  { emoji: "🤝", label: "Community grants", implemented: false },
-  { emoji: "🧳", label: "Newcomer services", implemented: false },
-  { emoji: "☎️", label: "311 requests", implemented: false },
+  { emoji: "✅", label: "Recreation", highlighted: true },
+  { emoji: "🏗️", label: "Building permits", highlighted: false },
+  { emoji: "🚛", label: "Waste collection", highlighted: false },
+  { emoji: "💧", label: "Water bills", highlighted: false },
+  { emoji: "🧸", label: "Child care", highlighted: false },
+  { emoji: "🐾", label: "Animal services", highlighted: false },
+  { emoji: "🅿️", label: "Parking permits", highlighted: false },
+  { emoji: "🩺", label: "Public health", highlighted: false },
+  { emoji: "🌱", label: "Tree planting", highlighted: false },
+  { emoji: "🏠", label: "Housing support", highlighted: false },
+  { emoji: "🚧", label: "Road repairs", highlighted: false },
+  { emoji: "🗺️", label: "City planning", highlighted: false },
+  { emoji: "🐕", label: "Pet licences", highlighted: false },
+  { emoji: "🎨", label: "Public art", highlighted: false },
+  { emoji: "🏡", label: "Property taxes", highlighted: false },
+  { emoji: "⛴️", label: "Island ferries", highlighted: false },
+  { emoji: "🔇", label: "Noise complaints", highlighted: false },
+  { emoji: "🏘️", label: "Community centres", highlighted: false },
+  { emoji: "🏪", label: "Business licences", highlighted: false },
+  { emoji: "🏊", label: "Swimming", highlighted: false },
+  { emoji: "❄️", label: "Snow clearing", highlighted: false },
+  { emoji: "💍", label: "Marriage licences", highlighted: false },
+  { emoji: "♻️", label: "Recycling", highlighted: false },
+  { emoji: "🌳", label: "Street trees", highlighted: false },
+  { emoji: "🏕️", label: "Summer camps", highlighted: false },
+  { emoji: "🎫", label: "Parking tickets", highlighted: false },
+  { emoji: "🖌️", label: "Arts grants", highlighted: false },
+  { emoji: "🚰", label: "Water quality", highlighted: false },
+  { emoji: "🧓", label: "Senior services", highlighted: false },
+  { emoji: "🚲", label: "Bike lanes", highlighted: false },
+  { emoji: "🏢", label: "Affordable housing", highlighted: false },
+  { emoji: "🥗", label: "Food safety", highlighted: false },
+  { emoji: "⛸️", label: "Skating", highlighted: false },
+  { emoji: "🍃", label: "Green bins", highlighted: false },
+  { emoji: "🌻", label: "Community gardens", highlighted: false },
+  { emoji: "💼", label: "Employment support", highlighted: false },
+  { emoji: "🏛️", label: "Historic sites", highlighted: false },
+  { emoji: "📅", label: "Facility bookings", highlighted: false },
+  { emoji: "🐈", label: "Animal adoption", highlighted: false },
+  { emoji: "💡", label: "Street lighting", highlighted: false },
+  { emoji: "💬", label: "Public consultations", highlighted: false },
+  { emoji: "🗳️", label: "Voting", highlighted: false },
+  { emoji: "💉", label: "Health clinics", highlighted: false },
+  { emoji: "📐", label: "Development plans", highlighted: false },
+  { emoji: "🏖️", label: "Beaches", highlighted: false },
+  { emoji: "⚽", label: "Sports fields", highlighted: false },
+  { emoji: "⚖️", label: "Bylaw enforcement", highlighted: false },
+  { emoji: "🌊", label: "Flood prevention", highlighted: false },
+  { emoji: "♿", label: "Accessibility", highlighted: false },
+  { emoji: "🛏️", label: "Shelter services", highlighted: false },
+  { emoji: "🎒", label: "After-school care", highlighted: false },
+  { emoji: "🎪", label: "Event permits", highlighted: false },
+  { emoji: "🧽", label: "Graffiti removal", highlighted: false },
+  { emoji: "🏋️", label: "Fitness classes", highlighted: false },
+  { emoji: "🕳️", label: "Potholes", highlighted: false },
+  { emoji: "🗑️", label: "Waste depots", highlighted: false },
+  { emoji: "🧱", label: "Heritage buildings", highlighted: false },
+  { emoji: "🤝", label: "Community grants", highlighted: false },
+  { emoji: "🧳", label: "Newcomer services", highlighted: false },
+  { emoji: "☎️", label: "311 requests", highlighted: false },
 ];
 
 export function LandingPage() {
@@ -89,7 +89,7 @@ export function LandingPage() {
                 <span className={styles.heroLastLine}>running around.</span>
               </span>
             </h1>
-            <p className={styles.heroSubtitle}>City services, one message away.</p>
+            <p className={styles.heroSubtitle}>Find your next activity in Toronto.</p>
             <Link className={styles.heroCta} href="/chat">
               Start chat
             </Link>
@@ -135,18 +135,18 @@ export function LandingPage() {
             <span>One conversation.</span>
           </h2>
           <p className={styles.fieldNote}>
-            This demo includes Voting and Recreation. We hope to bring every service on
-            this list together in Toronto One.
+            Explore City recreation programs, check the details and plan your next
+            outing. The rest of this list shows what Toronto One could bring together.
           </p>
           <p className={styles.srOnly} id="field-description">
-            A static field of 60 City services and programs. Voting and Recreation are
-            included in the demo. All remaining services represent future possibilities.
+            A static field of 60 City services and programs. Recreation is featured in
+            the current demo. The other labels show the wider vision for Toronto One.
           </p>
           <div className={styles.serviceField} aria-describedby="field-description">
-            {services.map(({ emoji, label, implemented }) => (
+            {services.map(({ emoji, label, highlighted }) => (
               <span
                 key={label}
-                className={`${styles.serviceItem}${implemented ? ` ${styles.serviceActive}` : ""}`}
+                className={`${styles.serviceItem}${highlighted ? ` ${styles.serviceActive}` : ""}`}
               >
                 <span className={styles.serviceEmoji} aria-hidden="true">
                   {emoji}

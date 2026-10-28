@@ -1,6 +1,6 @@
 # Service capabilities
 
-The enabled service scope is City of Toronto municipal voting information and recreation. The chat can also answer questions about Toronto One's creator using a concise, locally maintained bio adapted from [Tom Sanee's portfolio](https://www.tomsanee.com/), without a City lookup. Other municipal services, other governments and other ACTIVE tenants are outside the implemented workflows. A link from a City page does not grant execution authority over an external service.
+The public demo features City of Toronto recreation. Basketball and guided activity starters collect preferences through inline questions, then read current official activity details without preparing a booking. Tennis planning remains separately available. Municipal voting information is available on explicit request, subject to MyVote's publication state, and is no longer highlighted on the landing or chat welcome. The chat can also answer questions about Toronto One's creator using a concise, locally maintained bio adapted from [Tom Sanee's portfolio](https://www.tomsanee.com/), without a City lookup. Other municipal services, other governments and other ACTIVE tenants are outside the implemented workflows. A link from a City page does not grant execution authority over an external service.
 
 ## Voting information
 

@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from "next";
 import { LandingPage } from "@/components/landing/landing-page";
 
 export const metadata: Metadata = {
-  title: "Toronto One — City services, one message away.",
+  title: "Toronto One — Find your next activity in Toronto.",
   description:
-    "Hey, Toronto. I'll do the running around. Explore Toronto One, a demo bringing Voting and Recreation into one conversation.",
+    "Explore City of Toronto recreation programs, check the details and plan your next outing—all in one conversation.",
 };
 
 export const viewport: Viewport = {
