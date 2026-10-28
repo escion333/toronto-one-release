@@ -4,7 +4,7 @@
     {
       "images": {
         "base": {
-          "image": "registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote@sha256:3572bc27d4d725d7192808703f52fcacfdc2e8365ee0fe400330667a54121fe3",
+          "image": "registry.cloudflare.com/2d1132aadb6f2dd369f0b914b2df9678/toronto-one-remote@sha256:5729cb113b4faa9494dacd72e31494405e0f8b2776d05a61c4ca9977b29c4a6a",
         },
       },
       "class_name": "TorontoOne",

@@ -24,6 +24,8 @@ The build is tied to the pushed source commit. Uncommitted files are never uploa
 
 The deployment command also embeds that digest into the Worker through `TORONTO_ONE_DEPLOY_IMAGE`. This makes an application-image-only release change the Durable Object controller code and supplies its desired image explicitly, rather than relying only on an already-instantiated image map. A reported Worker upload alone is not activation evidence: configured/running digests must match the intended release before recording its pin.
 
+[Cloudflare propagates Worker and Durable Object code eventually consistently](https://developers.cloudflare.com/durable-objects/platform/known-issues/#code-updates), so a new Worker can briefly call the previous controller version. The command's health polling can end before that update becomes visible. Reconcile the accepted Worker version and its image map, allow propagation, then check public health again; do not submit another deployment merely because health still reports the preceding image. Record the canonical pin only after both live digests match the accepted release.
+
 The canonical Wrangler config also references a prebuilt image, so directly invoking Wrangler cannot trigger a local Docker build. Use `pnpm run deploy` for source updates; a bare Wrangler deployment only selects the already configured image. Keep Docker Desktop off. The Dockerfile and `pnpm check:ci` are for the remote runner; do not run the production check/build locally.
 
 ## Preview limits
