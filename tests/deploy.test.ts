@@ -32,6 +32,22 @@ test("remote build evidence must identify one immutable image in the expected re
   assert.throws(() => imageFromLogs(image, image.replace("2d1132aa", "1d1132aa")));
 });
 
+test("each immutable image is embedded in Worker code while other build definitions survive", () => {
+  const source = {
+    main: "worker.mjs",
+    define: { EXISTING: '"kept"', TORONTO_ONE_DEPLOY_IMAGE: JSON.stringify(image) },
+    containers: [{ images: { base: { image } } }],
+  };
+  const next = deploymentConfig(source, nextImage);
+  assert.equal(next.define?.TORONTO_ONE_DEPLOY_IMAGE, JSON.stringify(nextImage));
+  assert.equal(next.define?.EXISTING, '"kept"');
+  assert.equal(source.define.TORONTO_ONE_DEPLOY_IMAGE, JSON.stringify(image));
+  assert.notEqual(
+    deploymentConfig(source).define?.TORONTO_ONE_DEPLOY_IMAGE,
+    next.define?.TORONTO_ONE_DEPLOY_IMAGE,
+  );
+});
+
 test("health confirmation requires both configured and running image to match the remote build", () => {
   assert.equal(
     healthMatches({ ok: true, configuredImage: image, runningImage: image }, image),

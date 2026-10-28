@@ -22,6 +22,8 @@ The command uses your existing GitHub CLI and Wrangler sign-ins. It creates regi
 
 The build is tied to the pushed source commit. Uncommitted files are never uploaded. After deployment, the command waits for the public health endpoint to report the exact configured and running image digest, then updates the canonical Wrangler image pin. Include that pin in the next commit. A startup timeout requires checking the live image; it does not automatically redeploy.
 
+The deployment command also embeds that digest into the Worker through `TORONTO_ONE_DEPLOY_IMAGE`. This makes an application-image-only release change the Durable Object controller code and supplies its desired image explicitly, rather than relying only on an already-instantiated image map. A reported Worker upload alone is not activation evidence: configured/running digests must match the intended release before recording its pin.
+
 The canonical Wrangler config also references a prebuilt image, so directly invoking Wrangler cannot trigger a local Docker build. Use `pnpm run deploy` for source updates; a bare Wrangler deployment only selects the already configured image. Keep Docker Desktop off. The Dockerfile and `pnpm check:ci` are for the remote runner; do not run the production check/build locally.
 
 ## Preview limits

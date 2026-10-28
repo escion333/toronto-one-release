@@ -17,6 +17,7 @@ const imagePattern =
 const configSchema = z
   .object({
     main: z.string(),
+    define: z.record(z.string(), z.string()).optional(),
     containers: z
       .array(
         z
@@ -46,6 +47,12 @@ export function deploymentConfig(value: unknown, image?: string) {
       "Deployment requires an immutable, prebuilt Cloudflare image. Local Docker builds are disabled.",
     );
   container.images.base.image = reference;
+  // Image-only releases must also change the Worker code controlling the live
+  // Durable Object; its previous image map can otherwise remain instantiated.
+  config.define = {
+    ...config.define,
+    TORONTO_ONE_DEPLOY_IMAGE: JSON.stringify(reference),
+  };
   return config;
 }
 

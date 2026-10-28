@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+/* global TORONTO_ONE_DEPLOY_IMAGE */
 import { keepAwakeSettings, maintainWarmth } from "./keep-awake.ts";
 import { applyLedger } from "../../src/lib/ai/host-ledger.ts";
 import {
@@ -12,6 +13,14 @@ const prefix = "/toronto-one";
 const chatAdmission = new ChatAdmission();
 export class TorontoOne extends DurableObject {
   starting;
+
+  configuredImage() {
+    // The deployment command embeds the immutable digest in Worker code, so an
+    // application-only image change refreshes this controller as well.
+    return typeof TORONTO_ONE_DEPLOY_IMAGE === "string"
+      ? TORONTO_ONE_DEPLOY_IMAGE
+      : this.ctx.container.images.base;
+  }
 
   constructor(ctx, env) {
     super(ctx, env);
@@ -66,7 +75,7 @@ export class TorontoOne extends DurableObject {
       keepAwakeUntil: settings.active ? this.env.KEEP_AWAKE_UNTIL : null,
       nextWarmAlarm: alarm === null ? null : new Date(alarm).toISOString(),
       runningImage: running?.image ?? null,
-      configuredImage: this.ctx.container.images.base,
+      configuredImage: this.configuredImage(),
       admission,
       launch: {
         active: policy.launch,
@@ -138,7 +147,7 @@ export class TorontoOne extends DurableObject {
 
   async start() {
     const container = this.ctx.container;
-    const configuredImage = container.images.base;
+    const configuredImage = this.configuredImage();
     const { profile, ...allocation } = containerAllocation();
     const running = await container.inspect();
     if (running?.image && running.image !== configuredImage) await container.destroy();
